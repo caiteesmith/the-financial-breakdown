@@ -1,0 +1,6 @@
+streamlit>=1.30
+requests>=2.31
+pandas==2.2.3
+python-dateutil==2.9.0.post0
+geopy==2.4.1
+openpyxl>=3.1.2
