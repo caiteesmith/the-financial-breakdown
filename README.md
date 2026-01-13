@@ -5,6 +5,8 @@ It’s designed to help you clearly see where your money is going, how much flex
 
 The goal for this tool is clarity, calm, and confidence in knowing exactly where your finances stand.
 
+![Screenshot of Personal Finance Dashboard](assets/personal-finance-dash.png)
+
 ## ✨ Features
 ### Monthly Cash Flow
 Track your income, fixed expenses, variable expenses, and saving/investing in one place. The dashboard automatically calculates:
