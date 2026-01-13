@@ -108,6 +108,8 @@ DEFAULT_ASSETS = [
     {"Asset": "Savings", "Value": 0.0, "Notes": ""},
     {"Asset": "Brokerage", "Value": 0.0, "Notes": ""},
     {"Asset": "Retirement", "Value": 0.0, "Notes": ""},
+    {"Asset": "Value of Home (minus debt)", "Value": 0.0, "Notes": ""},
+    {"Asset": "Value of Vehicle (minus debt)", "Value": 0.0, "Notes": ""}
 ]
 DEFAULT_LIABILITIES = [
     {"Liability": "Mortgage", "Value": 0.0, "Notes": ""},
