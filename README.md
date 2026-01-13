@@ -37,31 +37,28 @@ Designed to feel calm, readable, and practical, NOT overwhelming.
 - Export monthly cash flow tables and net worth tables as CSV
 - Useful for backups, analysis, or importing elsewhere
 
-## 🎨 Design Philosophy
-
-- **Modern dark UI** that’s easy on the eyes
+## Design Philosophy
+- Modern dark UI that’s easy on the eyes
 - Subtle contrast and grouping instead of loud colors
 - Clear language over technical finance jargon
 - Focused on clarity, not complexity
 
 This tool is meant to support decision-making, not add stress.
 
----
-
 ## How Calculations Work
-- **Net Income**
-  - Uses entered income
-  - Optionally estimates taxes if income is entered as gross
+**Net Income**
+- Uses entered income
+- Optionally estimates taxes if income is entered as gross
 
-- **Expenses**
-  - Fixed & variable expenses are summed monthly
+**Expenses**
+- Fixed & variable expenses are summed monthly
 
-- **Left Over**
-  - Net income − expenses − saving/investing
+**Left Over**
+- Net income − expenses − saving/investing
 
-- **Emergency Minimum**
-  - Fixed expenses  
-  - + Essential variable expenses (auto-detected by category name)  
-  - + Minimum debt payments  
+**Emergency Minimum**
+- Fixed expenses
+- + Essential variable expenses (auto-detected by category name)  
+- + Minimum debt payments  
 
 > The emergency minimum is intentionally conservative. It represents survival-level spending, not comfort.
