@@ -1,17 +1,18 @@
 [theme]
 base = "dark"
 
-# Accent — subtle, modern (not loud)
-primaryColor = "#6366F1"               # soft indigo
+# Accent — muted evergreen
+primaryColor = "#2F7D6D"
 
-# App background
-backgroundColor = "#0E1117"            # modern near-black
-secondaryBackgroundColor = "#161B22"   # cards / panels
+# App background (green-tinted near-black)
+backgroundColor = "#0D1412"
+
+# Panels / cards
+secondaryBackgroundColor = "#16201C"
 
 # Text
-textColor = "#E6EDF3"                  # GitHub dark-style white
+textColor = "#E6F0EC"
 
-# Typography
 font = "sans serif"
 
 [client]
