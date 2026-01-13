@@ -376,7 +376,7 @@ def render_personal_finance_dashboard():
 
     st.write("Your emergency minimum covers:")
     st.write(
-        f"• **Fixed bills** (everything in your fix expenses): {_money(fixed_total)}"
+        f"• **Fixed bills** (everything in your fixed expenses): {_money(fixed_total)}"
     )
     st.write(
         f"• **Essentials** (groceries, utilities, transportation): {_money(essential_variable)}"
