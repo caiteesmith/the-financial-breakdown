@@ -13,7 +13,7 @@ def render_finance_theme_dark():
         background: #161B22;
       }
 
-      /* ---------- Buttons (squoval, not pills) ---------- */
+      /* ---------- Buttons ---------- */
       button[kind="primary"],
       button[kind="secondary"] {
         border-radius: 10px !important;

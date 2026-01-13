@@ -295,24 +295,26 @@ def render_personal_finance_dashboard():
     st.markdown(
         """
         <style>
-        /* Style ONLY the bordered container that contains our anchor */
+        /* ---------- Hero Summary Card ---------- */
         div[data-testid="stVerticalBlockBorderWrapper"]:has(#pf-summary-card) {
-            background: rgba(15, 26, 22, 0.85) !important;
-            border: 1px solid rgba(230, 240, 236, 0.16) !important;
-            border-radius: 18px !important;
-            padding: 14px 14px 8px 14px !important;
+            background: #161B22 !important; /* same as cards, lighter than page */
+            border: 1px solid rgba(255,255,255,.10) !important;
+            border-radius: 16px !important;
+            padding: 14px 14px 10px 14px !important;
+            margin-top: 6px;
         }
 
-        /* Make the Summary title feel “hero” */
+        /* Summary header spacing */
         div[data-testid="stVerticalBlockBorderWrapper"]:has(#pf-summary-card) h3 {
-            margin-top: 0.1rem !important;
-            margin-bottom: 0.75rem !important;
+            margin-top: 0.15rem !important;
+            margin-bottom: 0.85rem !important;
         }
 
-        /* Slightly elevate metrics inside the summary card */
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(#pf-summary-card) div[data-testid="metric-container"] {
-            background: rgba(22, 32, 28, 0.65) !important;
-            border: 1px solid rgba(230, 240, 236, 0.10) !important;
+        /* Metrics inside summary: slightly elevated */
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(#pf-summary-card)
+        div[data-testid="metric-container"] {
+            background: rgba(255,255,255,.02) !important;
+            border: 1px solid rgba(255,255,255,.08) !important;
         }
         </style>
         """,
