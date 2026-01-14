@@ -290,76 +290,62 @@ def render_mortgage_payoff_calculator():
                 monthly_payment = float(st.session_state["mtg_payment_manual"] or 0.0)
 
             st.divider()
-            st.subheader("Monthly housing costs (optional)")
+            with st.expander:
+                st.subheader("Monthly housing costs (optional)")
 
-            st.session_state.setdefault("mtg_taxes", 0.0)
-            st.session_state.setdefault("mtg_insurance", 0.0)
-            st.session_state.setdefault("mtg_pmi", 0.0)
-            st.session_state.setdefault("mtg_hoa", 0.0)
+                st.session_state.setdefault("mtg_taxes", 0.0)
+                st.session_state.setdefault("mtg_insurance", 0.0)
+                st.session_state.setdefault("mtg_pmi", 0.0)
+                st.session_state.setdefault("mtg_hoa", 0.0)
 
-            t1, t2 = st.columns(2, gap="medium")
+                t1, t2 = st.columns(2, gap="medium")
 
-            with t1:
-                taxes = st.number_input(
-                    "Property taxes",
-                    min_value=0.0,
-                    step=25.0,
-                    key="mtg_taxes",
-                )
-                insurance = st.number_input(
-                    "Home insurance",
-                    min_value=0.0,
-                    step=25.0,
-                    key="mtg_insurance",
-                )
+                with t1:
+                    taxes = st.number_input(
+                        "Property taxes",
+                        min_value=0.0,
+                        step=25.0,
+                        key="mtg_taxes",
+                    )
+                    insurance = st.number_input(
+                        "Home insurance",
+                        min_value=0.0,
+                        step=25.0,
+                        key="mtg_insurance",
+                    )
 
-            with t2:
-                pmi = st.number_input(
-                    "PMI",
-                    min_value=0.0,
-                    step=25.0,
-                    key="mtg_pmi",
-                    help="We can estimate when PMI drops off if you enter a home value above.",
-                )
-                hoa = st.number_input(
-                    "HOA dues",
-                    min_value=0.0,
-                    step=25.0,
-                    key="mtg_hoa",
-                )
+                with t2:
+                    pmi = st.number_input(
+                        "PMI",
+                        min_value=0.0,
+                        step=25.0,
+                        key="mtg_pmi",
+                        help="We can estimate when PMI drops off if you enter a home value above.",
+                    )
+                    hoa = st.number_input(
+                        "HOA dues",
+                        min_value=0.0,
+                        step=25.0,
+                        key="mtg_hoa",
+                    )
 
             st.divider()
-            st.subheader("Extra payments (optional)")
 
-            extra_monthly = st.number_input(
-                "Extra monthly (toward principal)",
-                min_value=0.0,
-                step=50.0,
-                key="mtg_extra_monthly",
-            )
-            extra_one_time = st.number_input(
-                "One-time extra payment",
-                min_value=0.0,
-                step=100.0,
-                key="mtg_extra_one_time",
-            )
+            with st.expander:
+                st.subheader("Extra payments (optional)")
 
-            # c1, c2 = st.columns([1, 1], gap="medium")
-            # with c1:
-            #     extra_one_time = st.number_input(
-            #         "One-time extra payment",
-            #         min_value=0.0,
-            #         step=100.0,
-            #         key="mtg_extra_one_time",
-            #     )
-            # with c2:
-            #     extra_one_time_month = st.number_input(
-            #         "Apply one-time extra in month",
-            #         min_value=0,
-            #         step=1,
-            #         key="mtg_extra_one_time_month",
-            #         help="0 means the first payment month, 1 means the second payment month, etc.",
-            #     )
+                extra_monthly = st.number_input(
+                    "Extra monthly (toward principal)",
+                    min_value=0.0,
+                    step=50.0,
+                    key="mtg_extra_monthly",
+                )
+                extra_one_time = st.number_input(
+                    "One-time extra payment",
+                    min_value=0.0,
+                    step=100.0,
+                    key="mtg_extra_one_time",
+                )
 
     # Run calculation
     with right:
