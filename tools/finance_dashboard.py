@@ -497,15 +497,15 @@ def render_personal_finance_dashboard():
         # -------------------------
         # SNAPSHOT CHART
         # -------------------------
-        # st.subheader("This Month at a Glance")
-        # fig, _, _ = cashflow_breakdown_chart(
-        #     net_income=net_income,
-        #     living_expenses=expenses_total,
-        #     debt_payments=total_monthly_debt_payments,
-        #     saving=saving_total,
-        #     investing_cashflow=investing_cashflow,
-        # )
-        # st.plotly_chart(fig, width="stretch")
+        st.subheader("This Month at a Glance")
+        fig, _, _ = cashflow_breakdown_chart(
+            net_income=net_income,
+            living_expenses=expenses_total,
+            debt_payments=total_monthly_debt_payments,
+            saving=saving_total,
+            investing_cashflow=investing_cashflow,
+        )
+        st.plotly_chart(fig, width="stretch")
 
         with st.container(border=True):
             _section("Income")
