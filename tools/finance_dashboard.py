@@ -591,7 +591,7 @@ def render_personal_finance_dashboard():
 
             with st.expander("What You Can Do With the Remaining", expanded=False):
                 st.caption(
-                    "This is optional guidance — there's no single right answer. "
+                    "This is optional guidance, there's no single right answer. "
                     "Use what fits your goals and current season of life."
                 )
 
@@ -607,24 +607,39 @@ def render_personal_finance_dashboard():
 
                     bullets = []
 
-                    bullets.append("💰 **Build or boost savings**: Emergency fund, short-term goals, or sinking funds.")
-                    bullets.append("📈 **Invest more** Brokerage, retirement, or HSA if you're not maxing them yet.")
+                    bullets.append("💰 Build/boost savings: Emergency fund, short-term goals, or sinking funds.")
+                    bullets.append("📈 Invest more: Brokerage, retirement, or HSA if you're not maxing them yet.")
 
                     if has_debt:
-                        bullets.append("🏦 **Pay down debt faster**: Extra principal on high-interest debt or your mortgage.")
+                        bullets.append("🏦 Pay down debt faster: Extra principal on high-interest debt or your mortgage.")
                     else:
-                        bullets.append("🏡 **Invest toward future goals**: Home upgrades, travel, FIRE, or long-term flexibility.")
+                        bullets.append("🏡 Invest toward future goals: Home upgrades, travel, FIRE, or long-term flexibility.")
 
-                    bullets.append("🎉 **Spend intentionally**: Guilt-free fun money that's already accounted for.")
-                    bullets.append("🔄 **Reallocate later**: It's okay to wait a month and decide once patterns emerge.")
+                    bullets.append("🎉 Spend intentionally: Guilt-free fun money that's already accounted for.")
+                    bullets.append("🔄 Reallocate later: It's okay to wait a month and decide once patterns emerge.")
 
                     for b in bullets:
                         st.markdown(f"- {b}")
 
                     st.info(
-                        "Tip: If you're unsure, try assigning a default (like 50% invest, 25% save, 25% enjoy) "
+                        "Tip: If you're unsure, try assigning a default (like 50% invest, 30% enjoy, 20% save) "
                         "and adjust after a few months."
                     )
+
+                    st.markdown("**A common reference: the 50-30-20 budget guideline**")
+
+                    st.markdown(
+                        """
+                        This is a *rule of thumb*, not a requirement:
+
+                        - **~50% Needs**: Housing, utilities, groceries, insurance, minimum debt payments  
+                        - **~30% Wants**: Dining out, subscriptions, travel, fun spending  
+                        - **~20% Save & Invest**: Emergency fund, investing, extra debt payments
+
+                        If your numbers don't fit this exactly, that's totally normal, especially with high housing costs, student loans, or aggressive saving goals.
+                        """
+                    )
+
 
         with st.container(border=True):
             _section("Net Worth & Liabilities")
