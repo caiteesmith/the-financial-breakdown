@@ -53,30 +53,9 @@ def _sum_by_keywords(df: pd.DataFrame, name_col: str, amount_col: str, keywords:
 
 
 def _ensure_df(key: str, default_rows: List[Dict]) -> pd.DataFrame:
-    """Store a df once in session_state; do NOT use this key as a widget key."""
     if key not in st.session_state or not isinstance(st.session_state[key], pd.DataFrame):
         st.session_state[key] = pd.DataFrame(default_rows)
     return st.session_state[key]
-
-
-def _sync_editor_to_df(editor_key: str, df_key: str):
-    """
-    Sync widget state -> persisted df state.
-
-    This runs via on_change at the *start* of the rerun, which avoids the
-    annoying "I typed it and it reverted" behavior and avoids writing to
-    a widget-owned key.
-    """
-    val = st.session_state.get(editor_key)
-    if isinstance(val, pd.DataFrame):
-        st.session_state[df_key] = val.copy()
-    else:
-        # In some Streamlit versions, data_editor stores dict-like state briefly.
-        try:
-            st.session_state[df_key] = pd.DataFrame(val).copy()
-        except Exception:
-            # If we can't coerce, do nothing.
-            pass
 
 
 # -------------------------
@@ -135,10 +114,10 @@ def render_personal_finance_dashboard():
     st.title("💸 Personal Finance Dashboard")
     st.caption(
         "A spreadsheet-style dashboard to track monthly cash flow + net worth. "
-        "Enter your numbers, and the tool does the math."
+        "Enter your numbers, click Save, and the tool does the math."
     )
 
-    # ---- Widget defaults (do NOT pass value= when using key=) ----
+    # ---- Widget defaults (no value= when key=) ----
     if "pf_month_label" not in st.session_state:
         st.session_state["pf_month_label"] = datetime.now().strftime("%B %Y")
     if "pf_tax_rate" not in st.session_state:
@@ -146,7 +125,7 @@ def render_personal_finance_dashboard():
     if "pf_income_is" not in st.session_state:
         st.session_state["pf_income_is"] = "Net (after tax)"
 
-    # ---- Persisted tables (storage keys) ----
+    # ---- Persisted tables ----
     _ensure_df("pf_income_df", DEFAULT_INCOME)
     _ensure_df("pf_fixed_df", DEFAULT_FIXED)
     _ensure_df("pf_variable_df", DEFAULT_VARIABLE)
@@ -155,7 +134,7 @@ def render_personal_finance_dashboard():
     _ensure_df("pf_assets_df", DEFAULT_ASSETS)
     _ensure_df("pf_liabilities_df", DEFAULT_LIABILITIES)
 
-    # ---- Global settings ----
+    # ---- Settings ----
     with st.expander("Settings", expanded=False):
         c1, c2, c3 = st.columns([1, 1, 1], gap="large")
         with c1:
@@ -177,79 +156,89 @@ def render_personal_finance_dashboard():
             )
 
     st.subheader("Your Monthly Cash Flow")
-
     left, right = st.columns([1.1, 0.9], gap="large")
 
+    # -------------------------
+    # EDITORS (Forms = no reruns while typing)
+    # -------------------------
     with left:
         tab_income, tab_exp, tab_save = st.tabs(["Income", "Expenses", "Saving / Investing"])
 
         with tab_income:
             st.write("Add your income sources (monthly amounts).")
 
-            # Sync first, then render (on_change runs at start of rerun)
-            income_df = st.data_editor(
-                st.session_state["pf_income_df"],
-                num_rows="dynamic",
-                use_container_width=True,
-                key="pf_income_editor",
-                on_change=_sync_editor_to_df,
-                args=("pf_income_editor", "pf_income_df"),
-                column_config={
-                    "Monthly Amount": st.column_config.NumberColumn(min_value=0.0, step=50.0, format="%.2f"),
-                },
-            )
-            # Use the returned df for calculations in this run
-            st.session_state["pf_income_df"] = income_df
+            with st.form("pf_income_form", border=False):
+                income_edit = st.data_editor(
+                    st.session_state["pf_income_df"],
+                    num_rows="dynamic",
+                    use_container_width=True,
+                    key="pf_income_editor",
+                    column_config={
+                        "Monthly Amount": st.column_config.NumberColumn(min_value=0.0, step=50.0, format="%.2f"),
+                    },
+                )
+                saved = st.form_submit_button("Save income", use_container_width=True)
+                if saved:
+                    st.session_state["pf_income_df"] = income_edit
 
         with tab_exp:
             st.write("Split your expenses into fixed & variable so you can see what's flexible.")
 
             st.markdown("**Fixed Expenses**")
-            fixed_df = st.data_editor(
-                st.session_state["pf_fixed_df"],
-                num_rows="dynamic",
-                use_container_width=True,
-                key="pf_fixed_editor",
-                on_change=_sync_editor_to_df,
-                args=("pf_fixed_editor", "pf_fixed_df"),
-                column_config={
-                    "Monthly Amount": st.column_config.NumberColumn(min_value=0.0, step=25.0, format="%.2f"),
-                },
-            )
-            st.session_state["pf_fixed_df"] = fixed_df
+            with st.form("pf_fixed_form", border=False):
+                fixed_edit = st.data_editor(
+                    st.session_state["pf_fixed_df"],
+                    num_rows="dynamic",
+                    use_container_width=True,
+                    key="pf_fixed_editor",
+                    column_config={
+                        "Monthly Amount": st.column_config.NumberColumn(min_value=0.0, step=25.0, format="%.2f"),
+                    },
+                )
+                saved_fixed = st.form_submit_button("Save fixed expenses", use_container_width=True)
+                if saved_fixed:
+                    st.session_state["pf_fixed_df"] = fixed_edit
 
             st.markdown("**Variable Expenses**")
-            variable_df = st.data_editor(
-                st.session_state["pf_variable_df"],
-                num_rows="dynamic",
-                use_container_width=True,
-                key="pf_variable_editor",
-                on_change=_sync_editor_to_df,
-                args=("pf_variable_editor", "pf_variable_df"),
-                column_config={
-                    "Monthly Amount": st.column_config.NumberColumn(min_value=0.0, step=25.0, format="%.2f"),
-                },
-            )
-            st.session_state["pf_variable_df"] = variable_df
+            with st.form("pf_variable_form", border=False):
+                variable_edit = st.data_editor(
+                    st.session_state["pf_variable_df"],
+                    num_rows="dynamic",
+                    use_container_width=True,
+                    key="pf_variable_editor",
+                    column_config={
+                        "Monthly Amount": st.column_config.NumberColumn(min_value=0.0, step=25.0, format="%.2f"),
+                    },
+                )
+                saved_variable = st.form_submit_button("Save variable expenses", use_container_width=True)
+                if saved_variable:
+                    st.session_state["pf_variable_df"] = variable_edit
 
         with tab_save:
             st.write("Monthly contributions you want to make (Retirement, brokerage, emergency fund, etc.).")
 
-            saving_df = st.data_editor(
-                st.session_state["pf_saving_df"],
-                num_rows="dynamic",
-                use_container_width=True,
-                key="pf_saving_editor",
-                on_change=_sync_editor_to_df,
-                args=("pf_saving_editor", "pf_saving_df"),
-                column_config={
-                    "Monthly Amount": st.column_config.NumberColumn(min_value=0.0, step=25.0, format="%.2f"),
-                },
-            )
-            st.session_state["pf_saving_df"] = saving_df
+            with st.form("pf_saving_form", border=False):
+                saving_edit = st.data_editor(
+                    st.session_state["pf_saving_df"],
+                    num_rows="dynamic",
+                    use_container_width=True,
+                    key="pf_saving_editor",
+                    column_config={
+                        "Monthly Amount": st.column_config.NumberColumn(min_value=0.0, step=25.0, format="%.2f"),
+                    },
+                )
+                saved_saving = st.form_submit_button("Save saving / investing", use_container_width=True)
+                if saved_saving:
+                    st.session_state["pf_saving_df"] = saving_edit
 
-    # ---- Calculate monthly cash flow ----
-    total_income = _sum_df(st.session_state["pf_income_df"], "Monthly Amount")
+    # ---- Calculations ----
+    income_df = st.session_state["pf_income_df"]
+    fixed_df = st.session_state["pf_fixed_df"]
+    variable_df = st.session_state["pf_variable_df"]
+    saving_df = st.session_state["pf_saving_df"]
+    debt_df = st.session_state["pf_debt_df"]
+
+    total_income = _sum_df(income_df, "Monthly Amount")
 
     est_tax = 0.0
     if income_is == "Gross (before tax)" and float(tax_rate) > 0:
@@ -258,11 +247,10 @@ def render_personal_finance_dashboard():
     else:
         net_income = total_income
 
-    fixed_total = _sum_df(st.session_state["pf_fixed_df"], "Monthly Amount")
-    variable_total = _sum_df(st.session_state["pf_variable_df"], "Monthly Amount")
+    fixed_total = _sum_df(fixed_df, "Monthly Amount")
+    variable_total = _sum_df(variable_df, "Monthly Amount")
     expenses_total = fixed_total + variable_total
-
-    saving_total = _sum_df(st.session_state["pf_saving_df"], "Monthly Amount")
+    saving_total = _sum_df(saving_df, "Monthly Amount")
     remaining = net_income - expenses_total - saving_total
 
     # ---- Emergency Minimum ----
@@ -276,15 +264,16 @@ def render_personal_finance_dashboard():
     ]
 
     essential_variable = _sum_by_keywords(
-        st.session_state["pf_variable_df"],
+        variable_df,
         name_col="Expense",
         amount_col="Monthly Amount",
         keywords=ESSENTIAL_VARIABLE_KEYWORDS,
     )
 
-    debt_minimums = _sum_df(st.session_state["pf_debt_df"], "Monthly Payment")
+    debt_minimums = _sum_df(debt_df, "Monthly Payment")
     emergency_minimum_monthly = fixed_total + essential_variable + debt_minimums
 
+    # ---- Summary card styling ----
     st.markdown(
         """
         <style>
@@ -309,6 +298,7 @@ def render_personal_finance_dashboard():
         unsafe_allow_html=True,
     )
 
+    # ---- Summary UI ----
     with right:
         with st.container(border=True):
             st.markdown('<div id="pf-summary-card"></div>', unsafe_allow_html=True)
@@ -316,14 +306,9 @@ def render_personal_finance_dashboard():
 
             top_l, top_r = st.columns(2, gap="medium")
             with top_l:
-                st.metric(
-                    "Net Income (monthly)",
-                    _money(net_income),
-                    help="If you selected gross income, this is estimated after tax.",
-                )
+                st.metric("Net Income (monthly)", _money(net_income))
                 if income_is == "Gross (before tax)" and float(tax_rate) > 0:
                     st.metric("Estimated Taxes (monthly)", _money(est_tax))
-
             with top_r:
                 st.metric("Left Over (monthly)", _money(remaining))
 
@@ -372,36 +357,41 @@ def render_personal_finance_dashboard():
 
     with a_col:
         st.markdown("**Assets**")
-        assets_df = st.data_editor(
-            st.session_state["pf_assets_df"],
-            num_rows="dynamic",
-            use_container_width=True,
-            key="pf_assets_editor",
-            on_change=_sync_editor_to_df,
-            args=("pf_assets_editor", "pf_assets_df"),
-            column_config={
-                "Value": st.column_config.NumberColumn(min_value=0.0, step=100.0, format="%.2f"),
-            },
-        )
-        st.session_state["pf_assets_df"] = assets_df
+        with st.form("pf_assets_form", border=False):
+            assets_edit = st.data_editor(
+                st.session_state["pf_assets_df"],
+                num_rows="dynamic",
+                use_container_width=True,
+                key="pf_assets_editor",
+                column_config={
+                    "Value": st.column_config.NumberColumn(min_value=0.0, step=100.0, format="%.2f"),
+                },
+            )
+            saved_assets = st.form_submit_button("Save assets", use_container_width=True)
+            if saved_assets:
+                st.session_state["pf_assets_df"] = assets_edit
 
     with l_col:
         st.markdown("**Liabilities**")
-        liabilities_df = st.data_editor(
-            st.session_state["pf_liabilities_df"],
-            num_rows="dynamic",
-            use_container_width=True,
-            key="pf_liabilities_editor",
-            on_change=_sync_editor_to_df,
-            args=("pf_liabilities_editor", "pf_liabilities_df"),
-            column_config={
-                "Value": st.column_config.NumberColumn(min_value=0.0, step=100.0, format="%.2f"),
-            },
-        )
-        st.session_state["pf_liabilities_df"] = liabilities_df
+        with st.form("pf_liabilities_form", border=False):
+            liabilities_edit = st.data_editor(
+                st.session_state["pf_liabilities_df"],
+                num_rows="dynamic",
+                use_container_width=True,
+                key="pf_liabilities_editor",
+                column_config={
+                    "Value": st.column_config.NumberColumn(min_value=0.0, step=100.0, format="%.2f"),
+                },
+            )
+            saved_liab = st.form_submit_button("Save liabilities", use_container_width=True)
+            if saved_liab:
+                st.session_state["pf_liabilities_df"] = liabilities_edit
 
-    total_assets = _sum_df(st.session_state["pf_assets_df"], "Value")
-    total_liabilities = _sum_df(st.session_state["pf_liabilities_df"], "Value")
+    assets_df = st.session_state["pf_assets_df"]
+    liabilities_df = st.session_state["pf_liabilities_df"]
+
+    total_assets = _sum_df(assets_df, "Value")
+    total_liabilities = _sum_df(liabilities_df, "Value")
     net_worth = total_assets - total_liabilities
 
     n1, n2, n3 = st.columns(3, gap="large")
@@ -415,20 +405,21 @@ def render_personal_finance_dashboard():
     st.subheader("Debt Details")
     st.caption("This doesn't affect net worth beyond the liability values — it's here for clarity and planning.")
 
-    debt_df = st.data_editor(
-        st.session_state["pf_debt_df"],
-        num_rows="dynamic",
-        use_container_width=True,
-        key="pf_debt_editor",
-        on_change=_sync_editor_to_df,
-        args=("pf_debt_editor", "pf_debt_df"),
-        column_config={
-            "Balance": st.column_config.NumberColumn(min_value=0.0, step=100.0, format="%.2f"),
-            "APR %": st.column_config.NumberColumn(min_value=0.0, max_value=60.0, step=0.1, format="%.2f"),
-            "Monthly Payment": st.column_config.NumberColumn(min_value=0.0, step=10.0, format="%.2f"),
-        },
-    )
-    st.session_state["pf_debt_df"] = debt_df
+    with st.form("pf_debt_form", border=False):
+        debt_edit = st.data_editor(
+            st.session_state["pf_debt_df"],
+            num_rows="dynamic",
+            use_container_width=True,
+            key="pf_debt_editor",
+            column_config={
+                "Balance": st.column_config.NumberColumn(min_value=0.0, step=100.0, format="%.2f"),
+                "APR %": st.column_config.NumberColumn(min_value=0.0, max_value=60.0, step=0.1, format="%.2f"),
+                "Monthly Payment": st.column_config.NumberColumn(min_value=0.0, step=10.0, format="%.2f"),
+            },
+        )
+        saved_debt = st.form_submit_button("Save debt details", use_container_width=True)
+        if saved_debt:
+            st.session_state["pf_debt_df"] = debt_edit
 
     total_debt_payment = _sum_df(st.session_state["pf_debt_df"], "Monthly Payment")
     st.metric("Total Monthly Debt Payments", _money(total_debt_payment))
@@ -509,25 +500,7 @@ def render_personal_finance_dashboard():
     with st.expander("Reset all data", expanded=False):
         st.warning("This clears the tool’s saved tables in this session.")
         if st.button("Reset now", type="primary", key="pf_reset_btn"):
-            for k in [
-                "pf_month_label",
-                "pf_tax_rate",
-                "pf_income_is",
-                "pf_income_df",
-                "pf_fixed_df",
-                "pf_variable_df",
-                "pf_saving_df",
-                "pf_debt_df",
-                "pf_assets_df",
-                "pf_liabilities_df",
-                "pf_income_editor",
-                "pf_fixed_editor",
-                "pf_variable_editor",
-                "pf_saving_editor",
-                "pf_assets_editor",
-                "pf_liabilities_editor",
-                "pf_debt_editor",
-            ]:
-                if k in st.session_state:
+            for k in list(st.session_state.keys()):
+                if k.startswith("pf_"):
                     del st.session_state[k]
             st.rerun()
