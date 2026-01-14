@@ -483,17 +483,19 @@ def render_personal_finance_dashboard():
 
             st.divider()
 
-            r2_l, r2_r = st.columns(2, gap="medium")
-            with r2_l:
-                st.metric("Left Over (monthly)", _money(remaining))
-            with r2_r:
-                st.metric("Debt Payments (monthly)", _money(total_monthly_debt_payments))
+            # r2_l, r2_r = st.columns(2, gap="medium")
+            # with r2_l:
+            #     st.metric("Left Over (monthly)", _money(remaining))
+            # with r2_r:
+            #     st.metric("Debt Payments (monthly)", _money(total_monthly_debt_payments))
 
             safe_weekly = remaining / 4.33
             safe_daily = remaining / 30.4
 
-            r3_l, r3_r = st.columns(2, gap="medium")
+            r3_l, r3_m, r3_r = st.columns(3, gap="medium")
             with r3_l:
+                st.metric("Left Over (monthly)", _money(remaining))
+            with r3_m:
                 st.metric("Safe-to-spend (weekly)", _money(safe_weekly))
             with r3_r:
                 st.metric("Safe-to-spend (daily)", _money(safe_daily))
