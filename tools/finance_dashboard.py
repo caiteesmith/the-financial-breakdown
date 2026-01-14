@@ -275,58 +275,39 @@ def render_personal_finance_dashboard():
         tab_income, tab_exp, tab_save = st.tabs(["Income", "Expenses", "Saving/Investing"])
 
         with tab_income:
-            st.write("Add your income sources. If you have a two-income household, include both here.")
+            st.write(
+                "Add your income sources. If you have a two-income household, include both here."
+            )
             st.caption(
                 "For paycheck-level accuracy (pre-tax 401k contributions, employer match, benefits, and taxes), "
                 "use the Income Settings & Tax/Deduction Options section above."
             )
 
-            with st.form("pf_income_form", border=False):
-                income_edit = st.data_editor(
-                    st.session_state["pf_income_df"],
-                    num_rows="dynamic",
-                    hide_index=True,
-                    width="stretch",
-                    key="pf_income_editor",
-                    column_config={
-                        "Monthly Amount": st.column_config.NumberColumn(min_value=0.0, step=50.0, format="%.2f"),
-                    },
-                )
-                if st.form_submit_button("Save income", width="stretch"):
-                    st.session_state["pf_income_df"] = _sanitize_editor_df(
-                        income_edit,
-                        expected_cols=["Source", "Monthly Amount", "Notes"],
-                        numeric_cols=["Monthly Amount"],
+            with tab_exp:
+                st.write("Split your expenses into fixed & variable so you can see what's flexible.")
+
+                with st.expander("Quick reality check to help your numbers be accurate)", expanded=False):
+                    st.caption(
+                        "This dashboard is only as good as the inputs. Before you guess, take 5-10 minutes to be brutally honest "
+                        "and scan the last 1-2 months of statements."
                     )
-                    st.rerun()
 
-        with tab_exp:
-            st.write("Split your expenses into fixed & variable so you can see what's flexible.")
+                    st.markdown(
+                        """
+                            **Where to look**
+                            - Bank & credit card statements: Search for common merchants (Starbucks, Dunkin, Wawa, etc.)
+                            - Amazon: Check Subscribe & Save and recurring orders
+                            - Apple/Google subscriptions: iCloud / Google Drive storage, app subscriptions
+                            - Spotify/Netflix/HBO Max/Hulu/Paramount Plus/Peacock/YouTube Premium
+                            - Gym memberships, class packs, and any “trial turned paid”
+                            - Vitamins/supplements, skincare, contact supplies
+                            - Coffee runs, snacks, “little treats” (they add up fast)
 
-            with st.expander("Quick reality check (helps your numbers be accurate)", expanded=False):
-                st.caption(
-                    "This dashboard is only as good as the inputs. Before you guess, take 5-10 minutes to be brutally honest "
-                    "and scan the last 1-2 months of statements."
-                )
-                st.markdown(
-                    """
-                        **Where to look**
-                        - Bank & credit card statements: search common merchants (Starbucks, Dunkin, Wawa, etc.)
-                        - Amazon: Subscribe & Save + recurring orders
-                        - Apple/Google subscriptions: iCloud / Google Drive storage, app subscriptions
-                        - Spotify/Netflix/etc.
-                        - Gym memberships, class packs, and any “trial turned paid”
-                        - Vitamins/supplements, skincare, contact supplies
-                        - Coffee runs, snacks, “little treats” (they add up fast)
-
-                        **Tip:** If something hits monthly (or “randomly but often”), it belongs here.
-                    """
-                )
-                st.info("Goal: Get to a realistic monthly average, not a perfect number.")
-                st.checkbox(
-                    "I checked statements & subscriptions before filling this out",
-                    key="pf_expenses_reality_check",
-                )
+                            **Tip:** If something hits monthly (or “randomly but often”), it belongs here.
+                        """
+                    )
+                    st.info("Goal: Get to a realistic monthly average, not a perfect number.")
+                    st.checkbox("I checked statements & subscriptions before filling this out", key="pf_expenses_reality_check")
             with st.form("pf_income_form", border=False):
                 income_edit = st.data_editor(
                     st.session_state["pf_income_df"],
