@@ -253,7 +253,7 @@ def render_personal_finance_dashboard():
                         disabled=not manual_mode,
                     )
 
-                submitted = st.form_submit_button("Save gross breakdown", use_container_width=True, disabled=not manual_mode)
+                submitted = st.form_submit_button("Save gross breakdown", width="stretch", disabled=not manual_mode)
 
                 if submitted:
                     st.success("Saved.")
@@ -690,7 +690,7 @@ def render_personal_finance_dashboard():
             net_income=net_income,
             debt_payments=total_monthly_debt_payments,
         )
-        st.plotly_chart(fig_burden, use_container_width=True)
+        st.plotly_chart(fig_burden, width="stretch")
 
     with c3:
         st.caption(
@@ -705,7 +705,7 @@ def render_personal_finance_dashboard():
             help="Avalanche saves more interest (highest APR first). Snowball builds momentum (smallest balance first).",
         )
         fig_order = debt_payoff_order_chart(st.session_state["pf_debt_df"], strategy=strategy)
-        st.plotly_chart(fig_order, use_container_width=True)
+        st.plotly_chart(fig_order, width="stretch")
 
     st.caption(
         "Tip: Keep paying minimums on everything, then put any extra toward the #1 ranked debt. "
