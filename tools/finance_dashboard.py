@@ -737,8 +737,7 @@ def render_personal_finance_dashboard():
 
             if remaining < 0:
                 st.error(
-                    f"You're over-allocated by **{_money(abs(remaining))}** this month. "
-                    "No shame, it just means something needs to give (even temporarily)."
+                    f"You're over-allocated by **{_money(abs(remaining))}** this month. No shame, it just means something needs to give (even temporarily)."
                 )
                 st.markdown(
                     "- Try trimming **wants** first (subscriptions, dining out, random spending)\n"
@@ -748,28 +747,23 @@ def render_personal_finance_dashboard():
 
             elif buffer < 200:
                 st.warning(
-                    f"You've got **{_money(buffer)}** left unallocated. "
-                    "That's a tight buffer; doable, but it can feel stressful if anything pops up."
+                    f"You've got **{_money(buffer)}** left unallocated. That's a tight buffer; doable, but it can feel stressful if anything pops up."
                 )
                 st.markdown(
-                    "- If it feels tight, aim for a buffer closer to **$200-$500**\n"
-                    "- Treat this like “life happens” money, not failure money"
+                    "If it feels tight, aim for a buffer closer to \$200-\$500. Treat this like “life happens” money, not failure money."
                 )
 
             elif buffer < 750:
                 st.success(
-                    f"You've got **{_money(buffer)}** left unallocated. "
-                    "That's a solid buffer, you've got breathing room."
+                    f"You've got **{_money(buffer)}** left unallocated. That's a solid buffer, you've got breathing room."
                 )
                 st.markdown(
-                    "- This is a great range for stability + flexibility\n"
-                    "- If you want, you can decide later whether to save it, invest it, or use it intentionally"
+                    "This is a great range for stability & flexibility. If you want, you can decide later whether to save it, invest it, or use it intentionally."
                 )
 
             else:
                 st.success(
-                    f"You've got **{_money(buffer)}** left unallocated. "
-                    "You're doing really good — this is strong flexibility."
+                    f"You've got **{_money(buffer)}** left unallocated. You're doing really good, this is strong flexibility."
                 )
                 st.markdown(
                     "- You could:\n"
