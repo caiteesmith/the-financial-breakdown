@@ -286,7 +286,7 @@ def render_personal_finance_dashboard():
             with tab_exp:
                 st.write("Split your expenses into fixed & variable so you can see what's flexible.")
 
-                with st.expander("Quick reality check to help your numbers be accurate)", expanded=False):
+                with st.expander("Quick reality check to help your numbers be accurate", expanded=False):
                     st.caption(
                         "This dashboard is only as good as the inputs. Before you guess, take 5-10 minutes to be brutally honest "
                         "and scan the last 1-2 months of statements."
@@ -302,11 +302,9 @@ def render_personal_finance_dashboard():
                             - Gym memberships, class packs, and any “trial turned paid”
                             - Vitamins/supplements, skincare, contact supplies
                             - Coffee runs, snacks, “little treats” (they add up fast)
-
-                            **Tip:** If something hits monthly (or “randomly but often”), it belongs here.
                         """
                     )
-                    st.info("Goal: Get to a realistic monthly average, not a perfect number.")
+                    st.info("Tip: If something hits monthly (or “randomly but often”), it belongs here.")
                     st.checkbox("I checked statements & subscriptions before filling this out", key="pf_expenses_reality_check")
             with st.form("pf_income_form", border=False):
                 income_edit = st.data_editor(
