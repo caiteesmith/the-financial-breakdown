@@ -568,7 +568,7 @@ def render_personal_finance_dashboard():
         st.write("")
 
         with st.container(border=True):
-            _section("Remaining")
+            _section("Safe-to-Spend")
             c1, c2 = st.columns(2, gap="medium")
             c1.metric("Monthly", _money(remaining))
             c2.metric("Weekly", _money(remaining / 4.33))
