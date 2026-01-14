@@ -352,142 +352,6 @@ def render_personal_finance_dashboard():
     st.subheader("Your Monthly Cash Flow")
     left, right = st.columns([1.1, 0.9], gap="large")
 
-    def spending_mix_donut(
-        expenses: float,
-        debt: float,
-        saving: float,
-        investing: float,
-        remaining: float,
-    ):
-        labels = []
-        values = []
-
-        for label, val in [
-            ("Living expenses", expenses),
-            ("Debt payments", debt),
-            ("Saving", saving),
-            ("Investing", investing),
-        ]:
-            if val > 0:
-                labels.append(label)
-                values.append(val)
-
-        if remaining > 0:
-            labels.append("Remaining")
-            values.append(remaining)
-
-        fig = go.Figure(
-            data=[
-                go.Pie(
-                    labels=labels,
-                    values=values,
-                    hole=0.55,
-                    hovertemplate="%{label}: $%{value:,.0f}<extra></extra>",
-                )
-            ]
-        )
-
-        fig.update_layout(
-            height=280,
-            margin=dict(t=20, b=20, l=20, r=20),
-            showlegend=True,
-        )
-
-        return fig
-    
-    def top_expenses_bar(fixed_df: pd.DataFrame, variable_df: pd.DataFrame):
-        df = pd.concat(
-            [
-                fixed_df[["Expense", "Monthly Amount"]],
-                variable_df[["Expense", "Monthly Amount"]],
-            ],
-            ignore_index=True,
-        )
-
-        df = (
-            df.groupby("Expense", as_index=False)["Monthly Amount"]
-            .sum()
-            .sort_values("Monthly Amount", ascending=False)
-            .head(8)
-        )
-
-        fig = go.Figure(
-            go.Bar(
-                x=df["Monthly Amount"],
-                y=df["Expense"],
-                orientation="h",
-                hovertemplate="%{y}: $%{x:,.0f}<extra></extra>",
-            )
-        )
-
-        fig.update_layout(
-            height=300,
-            margin=dict(l=120, r=20, t=20, b=20),
-            xaxis=dict(tickprefix="$", separatethousands=True),
-            yaxis=dict(autorange="reversed"),
-        )
-
-        return fig
-    
-    def debt_payments_vs_balances(debt_df: pd.DataFrame):
-        df = debt_df.copy()
-        df = df[(df["Balance"] > 0) | (df["Monthly Payment"] > 0)]
-
-        fig = go.Figure()
-
-        fig.add_bar(
-            x=df["Debt"],
-            y=df["Monthly Payment"],
-            name="Monthly Payment",
-            hovertemplate="%{x}<br>Payment: $%{y:,.0f}<extra></extra>",
-        )
-
-        fig.add_bar(
-            x=df["Debt"],
-            y=df["Balance"],
-            name="Balance",
-            hovertemplate="%{x}<br>Balance: $%{y:,.0f}<extra></extra>",
-        )
-
-        fig.update_layout(
-            barmode="group",
-            height=300,
-            margin=dict(l=20, r=20, t=20, b=40),
-            yaxis=dict(tickprefix="$", separatethousands=True),
-        )
-
-        return fig
-    
-    st.subheader("Visual Overview")
-
-    v1, v2 = st.columns(2, gap="large")
-
-    with v1:
-        st.plotly_chart(
-            spending_mix_donut(
-                expenses_total,
-                total_monthly_debt_payments,
-                saving_total,
-                investing_cashflow,
-                remaining,
-            ),
-            use_container_width=True,
-        )
-
-    with v2:
-        st.plotly_chart(
-            debt_payments_vs_balances(st.session_state["pf_debt_df"]),
-            use_container_width=True,
-        )
-
-    st.plotly_chart(
-        top_expenses_bar(
-            st.session_state["pf_fixed_df"],
-            st.session_state["pf_variable_df"],
-        ),
-        use_container_width=True,
-    )
-
     # -------------------------
     # EDITORS
     # -------------------------
@@ -669,6 +533,142 @@ def render_personal_finance_dashboard():
     employee_retirement = float(st.session_state.get("pf_manual_retirement", 0.0) or 0.0)
     company_match = float(st.session_state.get("pf_manual_match", 0.0) or 0.0)
     total_retirement_contrib = employee_retirement + company_match
+
+    def spending_mix_donut(
+        expenses: float,
+        debt: float,
+        saving: float,
+        investing: float,
+        remaining: float,
+    ):
+        labels = []
+        values = []
+
+        for label, val in [
+            ("Living expenses", expenses),
+            ("Debt payments", debt),
+            ("Saving", saving),
+            ("Investing", investing),
+        ]:
+            if val > 0:
+                labels.append(label)
+                values.append(val)
+
+        if remaining > 0:
+            labels.append("Remaining")
+            values.append(remaining)
+
+        fig = go.Figure(
+            data=[
+                go.Pie(
+                    labels=labels,
+                    values=values,
+                    hole=0.55,
+                    hovertemplate="%{label}: $%{value:,.0f}<extra></extra>",
+                )
+            ]
+        )
+
+        fig.update_layout(
+            height=280,
+            margin=dict(t=20, b=20, l=20, r=20),
+            showlegend=True,
+        )
+
+        return fig
+    
+    def top_expenses_bar(fixed_df: pd.DataFrame, variable_df: pd.DataFrame):
+        df = pd.concat(
+            [
+                fixed_df[["Expense", "Monthly Amount"]],
+                variable_df[["Expense", "Monthly Amount"]],
+            ],
+            ignore_index=True,
+        )
+
+        df = (
+            df.groupby("Expense", as_index=False)["Monthly Amount"]
+            .sum()
+            .sort_values("Monthly Amount", ascending=False)
+            .head(8)
+        )
+
+        fig = go.Figure(
+            go.Bar(
+                x=df["Monthly Amount"],
+                y=df["Expense"],
+                orientation="h",
+                hovertemplate="%{y}: $%{x:,.0f}<extra></extra>",
+            )
+        )
+
+        fig.update_layout(
+            height=300,
+            margin=dict(l=120, r=20, t=20, b=20),
+            xaxis=dict(tickprefix="$", separatethousands=True),
+            yaxis=dict(autorange="reversed"),
+        )
+
+        return fig
+    
+    def debt_payments_vs_balances(debt_df: pd.DataFrame):
+        df = debt_df.copy()
+        df = df[(df["Balance"] > 0) | (df["Monthly Payment"] > 0)]
+
+        fig = go.Figure()
+
+        fig.add_bar(
+            x=df["Debt"],
+            y=df["Monthly Payment"],
+            name="Monthly Payment",
+            hovertemplate="%{x}<br>Payment: $%{y:,.0f}<extra></extra>",
+        )
+
+        fig.add_bar(
+            x=df["Debt"],
+            y=df["Balance"],
+            name="Balance",
+            hovertemplate="%{x}<br>Balance: $%{y:,.0f}<extra></extra>",
+        )
+
+        fig.update_layout(
+            barmode="group",
+            height=300,
+            margin=dict(l=20, r=20, t=20, b=40),
+            yaxis=dict(tickprefix="$", separatethousands=True),
+        )
+
+        return fig
+    
+    st.subheader("Visual Overview")
+
+    v1, v2 = st.columns(2, gap="large")
+
+    with v1:
+        st.plotly_chart(
+            spending_mix_donut(
+                expenses_total,
+                total_monthly_debt_payments,
+                saving_total,
+                investing_cashflow,
+                remaining,
+            ),
+            use_container_width=True,
+        )
+
+    with v2:
+        st.plotly_chart(
+            debt_payments_vs_balances(st.session_state["pf_debt_df"]),
+            use_container_width=True,
+        )
+
+    st.plotly_chart(
+        top_expenses_bar(
+            st.session_state["pf_fixed_df"],
+            st.session_state["pf_variable_df"],
+        ),
+        use_container_width=True,
+    )
 
     # ---- Emergency Minimum ----
     ESSENTIAL_VARIABLE_KEYWORDS = [
