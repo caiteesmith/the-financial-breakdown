@@ -421,11 +421,10 @@ def render_personal_finance_dashboard():
     # ---- Emergency Minimum ----
     ESSENTIAL_VARIABLE_KEYWORDS = [
         "grocery", "groceries",
-        "electric", "electricity", "gas", "water", "sewer", "trash", "garbage",
+        "electric", "electricity", "natural gas", "water", "sewer", "trash", "garbage",
         "utility", "utilities",
         "internet", "wifi", "phone", "cell",
-        "insurance", "medical", "health", "prescription", "rx",
-        "gasoline", "fuel", "transit", "train", "toll", "parking",
+        "insurance", "medical", "health", "prescription", "rx", "medicine"
     ]
 
     essential_variable = _sum_by_keywords(
