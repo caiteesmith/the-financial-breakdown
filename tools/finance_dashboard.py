@@ -169,7 +169,7 @@ DEFAULT_LIABILITIES = [
 # Main UI
 # -------------------------
 def render_personal_finance_dashboard():
-    st.title("💸 Personal Finance Dashboard")
+    st.title("Personal Finance Dashboard")
     st.caption(
         "A spreadsheet-style dashboard to track your personal monthly cash flow and net worth. "
         "Enter your numbers, click Save, and the tool does the math."

@@ -16,11 +16,11 @@ def main():
     st.sidebar.title("Navigation")
     page = st.sidebar.radio(
         "Go to",
-        ["💸 Dashboard", "🏡 Mortgage Payoff"],
+        ["Personal Finance Dashboard", "Mortgage Payoff Calculator"],
         index=0,
     )
 
-    if page == "💸 Dashboard":
+    if page == "Personal Finance Dashboard":
         render_personal_finance_dashboard()
     else:
         render_mortgage_payoff_calculator()
