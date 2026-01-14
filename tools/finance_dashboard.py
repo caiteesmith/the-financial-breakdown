@@ -308,7 +308,6 @@ def render_personal_finance_dashboard():
                         """
                     )
                     st.info("Tip: If something hits monthly (or “randomly but often”), it belongs here.")
-                    st.checkbox("I checked statements & subscriptions before filling this out", key="pf_expenses_reality_check")
             with st.form("pf_income_form", border=False):
                 income_edit = st.data_editor(
                     st.session_state["pf_income_df"],
@@ -536,11 +535,6 @@ def render_personal_finance_dashboard():
 
     with right:
         st.markdown("### Summary")
-        if not st.session_state.get("pf_expenses_reality_check", False):
-            st.info(
-                "Quick reminder: Reviewing bank statements and subscriptions "
-                "can help make your expense numbers more accurate."
-            )
 
         # -------------------------
         # SNAPSHOT CHART
