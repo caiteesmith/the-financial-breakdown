@@ -10,7 +10,7 @@ from tools.mortgage_payoff import render_mortgage_payoff_calculator
 
 
 def main():
-    st.set_page_config(page_title="Personal Finance Dashboard", layout="wide")
+    st.set_page_config(page_title="The Financial Breakdown", layout="wide")
 
     # Sidebar navigation (new)
     st.sidebar.title("Navigation")
