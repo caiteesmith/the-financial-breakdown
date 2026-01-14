@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Optional, Tuple
+from typing import Optional
 
 import pandas as pd
 import streamlit as st
@@ -60,7 +60,6 @@ def _monthly_payment(principal: float, apr_pct: float, term_years: int) -> float
     if r <= 0:
         return p / n
 
-    # payment = P * r * (1+r)^n / ((1+r)^n - 1)
     pow_ = (1.0 + r) ** n
     return p * r * pow_ / (pow_ - 1.0)
 
@@ -118,7 +117,6 @@ def build_amortization_schedule(
     rows = []
     cum_interest = 0.0
 
-    # Guardrail: if payment is too small to cover interest, it will never amortize.
     first_interest = bal * r
     if r > 0 and pay <= first_interest:
         raise ValueError(
@@ -136,17 +134,11 @@ def build_amortization_schedule(
         beg = bal
 
         interest = beg * r if r > 0 else 0.0
-
-        # base payment (cannot exceed remaining balance + interest)
         base_payment = min(pay, beg + interest)
 
-        # one-time extra happens in the selected month index
         extra_this_month = extra_m + (one_time if i == int(extra_one_time_month_index) else 0.0)
-
-        # total paid this month cannot exceed beg + interest
         total_payment = min(base_payment + extra_this_month, beg + interest)
 
-        # split principal/interest
         principal_paid = max(0.0, total_payment - interest)
         end = max(0.0, beg - principal_paid)
 
@@ -218,6 +210,7 @@ def render_mortgage_payoff_calculator():
     # Defaults
     st.session_state.setdefault("mtg_start_date", date.today().replace(day=1))
     st.session_state.setdefault("mtg_principal", 422000.0)
+    st.session_state.setdefault("mtg_home_value", 0.0)  # NEW: used for PMI drop-off
     st.session_state.setdefault("mtg_apr", 6.625)
     st.session_state.setdefault("mtg_term_years", 30)
     st.session_state.setdefault("mtg_mode", "Calculate my payment (term-based)")
@@ -234,6 +227,13 @@ def render_mortgage_payoff_calculator():
 
             start_date = st.date_input("Start date (first payment month)", key="mtg_start_date")
             principal = st.number_input("Loan balance/principal", min_value=0.0, step=1000.0, key="mtg_principal")
+            home_value = st.number_input(
+                "Home value / purchase price (for PMI drop-off)",
+                min_value=0.0,
+                step=5000.0,
+                key="mtg_home_value",
+                help="Used to estimate when PMI can drop off (80% LTV). Set to 0 to disable PMI drop-off logic.",
+            )
             apr = st.number_input("Interest rate (APR %)", min_value=0.0, max_value=30.0, step=0.125, key="mtg_apr")
 
             st.radio(
@@ -256,6 +256,45 @@ def render_mortgage_payoff_calculator():
                     key="mtg_payment_manual",
                 )
                 monthly_payment = float(st.session_state["mtg_payment_manual"] or 0.0)
+
+            st.divider()
+            st.subheader("Monthly housing costs (optional)")
+
+            st.session_state.setdefault("mtg_taxes", 0.0)
+            st.session_state.setdefault("mtg_insurance", 0.0)
+            st.session_state.setdefault("mtg_pmi", 0.0)
+            st.session_state.setdefault("mtg_hoa", 0.0)
+
+            t1, t2 = st.columns(2, gap="medium")
+
+            with t1:
+                taxes = st.number_input(
+                    "Property taxes (monthly)",
+                    min_value=0.0,
+                    step=25.0,
+                    key="mtg_taxes",
+                )
+                insurance = st.number_input(
+                    "Home insurance (monthly)",
+                    min_value=0.0,
+                    step=25.0,
+                    key="mtg_insurance",
+                )
+
+            with t2:
+                pmi = st.number_input(
+                    "PMI (monthly)",
+                    min_value=0.0,
+                    step=25.0,
+                    key="mtg_pmi",
+                    help="We can estimate when PMI drops off if you enter a home value above.",
+                )
+                hoa = st.number_input(
+                    "HOA dues (monthly)",
+                    min_value=0.0,
+                    step=25.0,
+                    key="mtg_hoa",
+                )
 
             st.divider()
             st.subheader("Extra payments (optional)")
@@ -306,16 +345,65 @@ def render_mortgage_payoff_calculator():
         payoff_date = result.payoff_date
         months = result.months
 
-        # Summary metrics
-        # 2x2 grid so values don't truncate on narrower screens
+        taxes_v = float(st.session_state.get("mtg_taxes", 0.0) or 0.0)
+        insurance_v = float(st.session_state.get("mtg_insurance", 0.0) or 0.0)
+        pmi_v = float(st.session_state.get("mtg_pmi", 0.0) or 0.0)
+        hoa_v = float(st.session_state.get("mtg_hoa", 0.0) or 0.0)
+
+        # ---- PMI drop-off detection (80% LTV) ----
+        pmi_drop_date: Optional[date] = None
+        pmi_drop_month_index: Optional[int] = None
+
+        if float(home_value or 0.0) > 0 and pmi_v > 0 and not result.schedule.empty:
+            threshold_balance = float(home_value) * 0.80
+            for _, row in result.schedule.iterrows():
+                if float(row["Ending Balance"]) <= threshold_balance:
+                    pmi_drop_month_index = int(row["Payment #"]) - 1  # 0-based
+                    pmi_drop_date = row["Date"]
+                    break
+
+        # ---- Monthly housing cost: before/after PMI ----
+        non_pi_before = taxes_v + insurance_v + pmi_v + hoa_v
+        non_pi_after = taxes_v + insurance_v + hoa_v
+
+        total_housing_before = float(monthly_payment) + non_pi_before
+        total_housing_after = float(monthly_payment) + non_pi_after
+
+        # Summary metrics (2x2 grid so values don't truncate)
         r1c1, r1c2 = st.columns(2, gap="large")
         r2c1, r2c2 = st.columns(2, gap="large")
 
-        r1c1.metric("Monthly P&I", _money(monthly_payment))
-        r1c2.metric("Payoff (months)", f"{months:,}")
+        r1c1.metric("Mortgage P&I", _money(monthly_payment))
+        r1c2.metric("Housing (w/ PMI)", _money(total_housing_before))
 
-        r2c1.metric("Total Interest", _money(result.total_interest))
-        r2c2.metric("Total Paid", _money(result.total_paid))
+        r2c1.metric("Payoff (months)", f"{months:,}")
+        r2c2.metric("Total Interest Paid", _money(result.total_interest))
+
+        # PMI drop message + updated housing cost after PMI
+        if pmi_drop_date:
+            st.success(
+                f"PMI drops off in **{pmi_drop_date.strftime('%B %Y')}**, "
+                f"reducing your monthly housing by **{_money(pmi_v)}**."
+            )
+            st.caption(f"Monthly housing after PMI: **{_money(total_housing_after)}**")
+        elif pmi_v > 0 and float(home_value or 0.0) <= 0:
+            st.info("Enter a home value above to estimate when PMI drops off (80% LTV).")
+
+        with st.expander("Monthly housing cost breakdown", expanded=False):
+            st.write(f"• **Principal & Interest**: {_money(monthly_payment)}")
+            if taxes_v:
+                st.write(f"• **Property Taxes**: {_money(taxes_v)}")
+            if insurance_v:
+                st.write(f"• **Insurance**: {_money(insurance_v)}")
+
+            if pmi_v:
+                if pmi_drop_date:
+                    st.write(f"• **PMI (until {pmi_drop_date.strftime('%B %Y')})**: {_money(pmi_v)}")
+                else:
+                    st.write(f"• **PMI**: {_money(pmi_v)}")
+
+            if hoa_v:
+                st.write(f"• **HOA**: {_money(hoa_v)}")
 
         if payoff_date:
             st.success(f"Estimated payoff date: **{payoff_date.strftime('%B %Y')}**")
