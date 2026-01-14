@@ -405,8 +405,7 @@ def render_personal_finance_dashboard():
                                     font-size: 0.85rem;
                                     margin-top: 0.4rem;
                                 ">
-                                    <div>Total retirement contribution (employee + match): {_money(total_retirement_contrib)}</strong></div>
-                                    <div>Company match tracked: <strong>{_money(company_match)}</strong></div>
+                                    <div>Total retirement contribution: {_money(total_retirement_contrib)}</strong></div>
                                 </div>
                                 """,
                             unsafe_allow_html=True,
