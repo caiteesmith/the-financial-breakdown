@@ -279,7 +279,6 @@ def render_personal_finance_dashboard():
                 "Add your income sources. If you have a two-income household, include both here."
             )
             st.caption(
-                "Want to enter exact paycheck taxes and deductions? "
                 "For paycheck-level accuracy (pre-tax 401k contributions, employer match, benefits, and taxes), "
                 "use the Income Settings & Tax/Deduction Options section above."
             )
