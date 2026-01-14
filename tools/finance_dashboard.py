@@ -97,6 +97,9 @@ def _sanitize_editor_df(df: pd.DataFrame, expected_cols: List[str], numeric_cols
     df = df.reset_index(drop=True)
     return df
 
+def _pct(x: float | None) -> str:
+    return "—" if x is None else f"{x:.1f}%"
+
 
 # -------------------------
 # Defaults
@@ -481,6 +484,15 @@ def render_personal_finance_dashboard():
     company_match = float(st.session_state.get("pf_manual_match", 0.0) or 0.0)
     total_retirement_contrib = employee_retirement + company_match
 
+    investing_rate_of_gross = None
+    investing_rate_of_net = None
+
+    if total_income > 0:
+        investing_rate_of_gross = (investing_display / total_income) * 100
+
+    if net_income > 0:
+        investing_rate_of_net = (investing_display / net_income) * 100
+
     # -------------------------
     # VISUAL OVERVIEW
     # -------------------------
@@ -563,10 +575,11 @@ def render_personal_finance_dashboard():
 
             c5, c6 = st.columns(2, gap="medium")
             c5.metric("Total Expenses", _money(total_outflow))
-            c6.metric("Remaining", _money(net_income - total_outflow))
-
-        st.write("")
-
+            c6.metric(
+                "Percentage of Income Invested",
+                _pct(investing_rate_of_gross),
+                help="Investing divided by total pre-tax income."
+            )
         with st.container(border=True):
             _section("Safe-to-Spend")
             c1, c2 = st.columns(2, gap="medium")
