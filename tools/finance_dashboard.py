@@ -475,6 +475,7 @@ def render_personal_finance_dashboard():
 
     total_outflow = expenses_total + total_saving_and_investing_cashflow + total_monthly_debt_payments
     remaining = net_income - total_outflow
+    has_debt = total_monthly_debt_payments > 0
 
     total_assets = _sum_df(assets_df, "Value")
     total_liabilities = _sum_df(liabilities_df, "Value")
@@ -588,7 +589,44 @@ def render_personal_finance_dashboard():
             c3, _ = st.columns(2, gap="medium")
             c3.metric("Daily", _money(remaining / 30.4))
 
-        st.write("")
+            with st.container(border=True):
+                _section("What You Can Do With the Remaining")
+
+                st.caption(
+                    "This is optional guidance — there's no single right answer. "
+                    "Use what fits your goals and current season of life."
+                )
+
+                if remaining <= 0:
+                    st.info(
+                        "You're currently allocating all of your income. "
+                        "If things feel tight, consider reducing discretionary expenses or lowering savings temporarily."
+                    )
+                else:
+                    st.markdown(
+                        f"**You have {_money(remaining)} available each month.** Here are common, intentional ways people use it:"
+                    )
+
+                    bullets = []
+
+                    bullets.append("💰 **Build or boost savings**: Emergency fund, short-term goals, or sinking funds.")
+                    bullets.append("📈 **Invest more** Brokerage, retirement, or HSA if you're not maxing them yet.")
+
+                    if has_debt:
+                        bullets.append("🏦 **Pay down debt faster**: Extra principal on high-interest debt or your mortgage.")
+                    else:
+                        bullets.append("🏡 **Invest toward future goals**: Home upgrades, travel, FIRE, or long-term flexibility.")
+
+                    bullets.append("🎉 **Spend intentionally**: Guilt-free fun money that's already accounted for.")
+                    bullets.append("🔄 **Reallocate later**: It's okay to wait a month and decide once patterns emerge.")
+
+                    for b in bullets:
+                        st.markdown(f"- {b}")
+
+                    st.info(
+                        "Tip: If you're unsure, try assigning a default (like 50% invest, 25% save, 25% enjoy) "
+                        "and adjust after a few months."
+                    )
 
         with st.container(border=True):
             _section("Net Worth & Liabilities")
