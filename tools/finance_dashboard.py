@@ -308,13 +308,18 @@ def render_personal_finance_dashboard():
                     st.success("Saved.")
                     st.rerun()
 
-                st.caption(
-                    f"Saved deductions being used: "
-                    f"Taxes ${st.session_state['pf_manual_taxes']:,.0f}, "
-                    f"Benefits ${st.session_state['pf_manual_benefits']:,.0f}, "
-                    f"Retirement ${st.session_state['pf_manual_retirement']:,.0f}, "
-                    f"Other/SSI ${st.session_state['pf_manual_other_ssi']:,.0f}."
-                )
+                with st.container(border=True):
+                    st.markdown("**Saved deductions being used**")
+
+                    m1, m2, m3, m4 = st.columns(4, gap="medium")
+                    m1.metric("Taxes", _money(st.session_state["pf_manual_taxes"]))
+                    m2.metric("Benefits", _money(st.session_state["pf_manual_benefits"]))
+                    m3.metric("Retirement", _money(st.session_state["pf_manual_retirement"]))
+                    m4.metric("Other/SSI", _money(st.session_state["pf_manual_other_ssi"]))
+
+                    st.divider()
+                    st.caption("Company match doesn't reduce take-home. It's tracked separately.")
+                    st.metric("Company Match (tracked)", _money(st.session_state["pf_manual_match"]))
 
         with tab_exp:
             st.markdown("**Fixed Expenses**")
