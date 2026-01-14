@@ -10,6 +10,7 @@ import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
 import re
+from tools.pf_visuals import render_visual_overview
 
 # -------------------------
 # Helpers
@@ -302,59 +303,23 @@ def render_personal_finance_dashboard():
     # =========================
     # MONTHLY SNAPSHOT CHART
     # =========================
-    income_df = st.session_state["pf_income_df"]
-    fixed_df = st.session_state["pf_fixed_df"]
-    variable_df = st.session_state["pf_variable_df"]
-    saving_df = st.session_state["pf_saving_df"]
-    investing_df = st.session_state["pf_investing_df"]
-    debt_df = st.session_state["pf_debt_df"]
-
-    total_income = _sum_df(income_df, "Monthly Amount")
-
-    # Net income
-    est_tax = 0.0
-    manual_deductions_total = 0.0
-    net_income = total_income
-
-    if income_is == "Gross (before tax)":
-        if st.session_state.get("pf_gross_mode") == "Estimate (tax rate)":
-            if float(tax_rate) > 0:
-                est_tax = total_income * (float(tax_rate) / 100.0)
-            net_income = total_income - est_tax
-        else:
-            manual_taxes = float(st.session_state.get("pf_manual_taxes", 0.0) or 0.0)
-            manual_retirement = float(st.session_state.get("pf_manual_retirement", 0.0) or 0.0)
-            manual_benefits = float(st.session_state.get("pf_manual_benefits", 0.0) or 0.0)
-            manual_other_ssi = float(st.session_state.get("pf_manual_other_ssi", 0.0) or 0.0)
-            manual_deductions_total = manual_taxes + manual_retirement + manual_benefits + manual_other_ssi
-            net_income = total_income - manual_deductions_total
-
-    living_expenses = _sum_df(fixed_df, "Monthly Amount") + _sum_df(variable_df, "Monthly Amount")
-    debt_payments = _sum_df(debt_df, "Monthly Payment")
-    saving_total = _sum_df(saving_df, "Monthly Amount")
-
-    investing_cashflow = _sum_df(investing_df, "Monthly Amount")
-    # Only add employee retirement to cashflow if gross + manual deductions
-    if income_is == "Gross (before tax)" and st.session_state.get("pf_gross_mode") == "Manual deductions":
-        investing_cashflow += float(st.session_state.get("pf_manual_retirement", 0.0) or 0.0)
-
-    fig, _, _ = _cashflow_breakdown_chart(
-        net_income=net_income,
-        living_expenses=living_expenses,
-        debt_payments=debt_payments,
-        saving=saving_total,
+    render_visual_overview(
+        expenses_total=expenses_total,
+        total_monthly_debt_payments=total_monthly_debt_payments,
+        saving_total=saving_total,
         investing_cashflow=investing_cashflow,
+        remaining=remaining,
+        fixed_df=st.session_state["pf_fixed_df"],
+        variable_df=st.session_state["pf_variable_df"],
+        debt_df=st.session_state["pf_debt_df"],
     )
-
-    st.subheader("This Month at a Glance")
-    st.plotly_chart(fig, use_container_width=True)
-
-    st.subheader("Your Monthly Cash Flow")
-    left, right = st.columns([1.1, 0.9], gap="large")
 
     # -------------------------
     # EDITORS
     # -------------------------
+    st.subheader("Your Monthly Cash Flow")
+    left, right = st.columns([1.1, 0.9], gap="large")
+    
     with left:
         tab_income, tab_exp, tab_save = st.tabs(["Income", "Expenses", "Saving/Investing"])
 
