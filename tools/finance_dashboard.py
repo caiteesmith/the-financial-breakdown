@@ -729,6 +729,62 @@ def render_personal_finance_dashboard():
             c1.metric("Net Worth", _money(net_worth))
             c2.metric("Total Liabilities", _money(total_liabilities))
 
+        # --- SUMMARY RUNDOWN ---
+        with st.container(border=True):
+            _section("How You're Doing (quick vibes check)")
+
+            # Use unallocated_total (>= 0) and remaining (can be negative)
+            buffer = unallocated_total
+
+            if remaining < 0:
+                st.error(
+                    f"You're over-allocated by **{_money(abs(remaining))}** this month. "
+                    "No shame — it just means something needs to give (even temporarily)."
+                )
+                st.markdown(
+                    "- Try trimming **wants** first (subscriptions, dining out, random spending)\n"
+                    "- Or lower saving/investing for a month while you stabilize\n"
+                    "- If debt is heavy, consider focusing extra money on the highest-interest balance"
+                )
+
+            elif buffer < 200:
+                st.warning(
+                    f"You've got **{_money(buffer)}** left unallocated. "
+                    "That's a tight buffer — doable, but it can feel stressful if anything pops up."
+                )
+                st.markdown(
+                    "- If it feels tight, aim for a buffer closer to **$200-$500**\n"
+                    "- Treat this like “life happens” money — not failure money"
+                )
+
+            elif buffer < 750:
+                st.success(
+                    f"You've got **{_money(buffer)}** left unallocated. "
+                    "That's a solid buffer, you've got breathing room."
+                )
+                st.markdown(
+                    "- This is a great range for stability + flexibility\n"
+                    "- If you want, you can decide later whether to save it, invest it, or use it intentionally"
+                )
+
+            else:
+                st.success(
+                    f"You've got **{_money(buffer)}** left unallocated. "
+                    "You're doing really good — this is strong flexibility."
+                )
+                st.markdown(
+                    "- You could:\n"
+                    "  - build your emergency fund faster\n"
+                    "  - invest more\n"
+                    "  - pay down debt faster\n"
+                    "  - set aside guilt-free fun money\n"
+                    "  - or keep it as a buffer while you watch patterns for a few months"
+                )
+
+            st.caption(
+                "Unallocated isn't “wasted” — it's your buffer, flexibility, and future decisions."
+            )
+
     st.divider()
     st.subheader("🆘 Your Emergency Minimum")
 
