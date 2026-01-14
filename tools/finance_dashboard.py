@@ -487,7 +487,7 @@ def render_personal_finance_dashboard():
     # ---- Summary UI ----
     def _section(title: str):
         st.markdown(
-            f"<div style='font-size:0.85rem; letter-spacing:.06em; text-transform:uppercase; opacity:.70; margin: 0 0 0.6rem 0;'>{title}</div>",
+            f"<div style='font-size:0.85rem; letter-spacing:.06em; text-transform:uppercase; opacity:.70; margin: 0.2rem 0 0.6rem 0;'>{title}</div>",
             unsafe_allow_html=True,
         )
 
@@ -497,15 +497,15 @@ def render_personal_finance_dashboard():
         # -------------------------
         # SNAPSHOT CHART
         # -------------------------
-        st.subheader("This Month at a Glance")
-        fig, _, _ = cashflow_breakdown_chart(
-            net_income=net_income,
-            living_expenses=expenses_total,
-            debt_payments=total_monthly_debt_payments,
-            saving=saving_total,
-            investing_cashflow=investing_cashflow,
-        )
-        st.plotly_chart(fig, width="stretch")
+        # st.subheader("This Month at a Glance")
+        # fig, _, _ = cashflow_breakdown_chart(
+        #     net_income=net_income,
+        #     living_expenses=expenses_total,
+        #     debt_payments=total_monthly_debt_payments,
+        #     saving=saving_total,
+        #     investing_cashflow=investing_cashflow,
+        # )
+        # st.plotly_chart(fig, width="stretch")
 
         with st.container(border=True):
             _section("Income")
