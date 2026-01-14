@@ -556,7 +556,7 @@ def render_personal_finance_dashboard():
 
         # ---- Summary section ----
         with st.container(border=True):
-            _section("Income")
+            _section("Net & Gross Income")
             c1, c2 = st.columns(2, gap="medium")
             c1.metric("Net Income", _money(net_income))
             c2.metric("Gross Income", _money(total_income))
@@ -591,7 +591,7 @@ def render_personal_finance_dashboard():
         st.write("")
 
         with st.container(border=True):
-            _section("Net Worth")
+            _section("Net Worth & Liabilities")
             c1, c2 = st.columns(2, gap="medium")
             c1.metric("Net Worth", _money(net_worth))
             c2.metric("Total Liabilities", _money(total_liabilities))
