@@ -255,18 +255,8 @@ def render_personal_finance_dashboard():
         else:
             st.info("Using estimated tax rate. Switch to Manual deductions if you want to specify exact amounts.")
 
-    # -------------------------
-    # SNAPSHOT CHART
-    # -------------------------
-    st.subheader("This Month at a Glance")
-    fig, _, _ = cashflow_breakdown_chart(
-        net_income=net_income,
-        living_expenses=expenses_total,
-        debt_payments=total_monthly_debt_payments,
-        saving=saving_total,
-        investing_cashflow=investing_cashflow,
-    )
-    st.plotly_chart(fig, width="stretch")
+    # Cashflow chart
+    cashflow_chart_slot = st.container()
 
     # -------------------------
     # EDITORS
@@ -455,6 +445,17 @@ def render_personal_finance_dashboard():
     # -------------------------
     # VISUAL OVERVIEW
     # -------------------------
+    with cashflow_chart_slot:
+        st.subheader("Monthly Cash Flow")
+        fig, _, _ = cashflow_breakdown_chart(
+            net_income=net_income,
+            living_expenses=expenses_total,
+            debt_payments=total_monthly_debt_payments,
+            saving=saving_total,
+            investing_cashflow=investing_cashflow,
+        )
+        st.plotly_chart(fig, width="stretch")
+
     render_visual_overview(
         expenses_total=expenses_total,
         total_monthly_debt_payments=total_monthly_debt_payments,
