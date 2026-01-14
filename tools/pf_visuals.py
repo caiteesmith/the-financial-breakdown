@@ -79,19 +79,10 @@ def cashflow_breakdown_chart(
             showgrid=False,
             zeroline=False,
             fixedrange=True,
-
-            # keep full-width; avoid Plotly adding side padding
             automargin=False,
             domain=[0, 1],
-
-            # labels inside the plot area (so they don't create outside padding)
-            ticklabelposition="inside",
-
-            # spacing between the axis line and tick labels
-            # (positive pushes labels deeper into the plot area when "inside")
+            ticklabelposition="outside",
             ticklabelstandoff=14,
-
-            # small tick marks (optional; makes axis feel intentional)
             ticks="outside",
             ticklen=4,
         ),
