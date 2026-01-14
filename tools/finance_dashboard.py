@@ -197,6 +197,12 @@ def render_personal_finance_dashboard():
     st.session_state.setdefault("pf_manual_benefits", 0.0)
     st.session_state.setdefault("pf_manual_other_ssi", 0.0)
 
+    # Always read settings from session_state for calculations 
+    month_label = st.session_state.get("pf_month_label", datetime.now().strftime("%B %Y"))
+    tax_rate = float(st.session_state.get("pf_tax_rate", 0.0) or 0.0)
+    income_is = st.session_state.get("pf_income_is", "Net (after tax)")
+    gross_mode = st.session_state.get("pf_gross_mode", "Estimate (tax rate)")
+
     # ---- Persisted tables ----
     _ensure_df("pf_income_df", DEFAULT_INCOME)
     _ensure_df("pf_fixed_df", DEFAULT_FIXED)
@@ -441,16 +447,19 @@ def render_personal_finance_dashboard():
     manual_deductions_total = 0.0
     net_income = total_income
 
+    net_income = total_income
+
     if income_is == "Gross (before tax)":
-        if st.session_state.get("pf_gross_mode") == "Estimate (tax rate)":
-            if float(tax_rate) > 0:
-                est_tax = total_income * (float(tax_rate) / 100.0)
+        if gross_mode == "Estimate (tax rate)":
+            if tax_rate > 0:
+                est_tax = total_income * (tax_rate / 100.0)
             net_income = total_income - est_tax
         else:
             manual_taxes = float(st.session_state.get("pf_manual_taxes", 0.0) or 0.0)
             manual_retirement = float(st.session_state.get("pf_manual_retirement", 0.0) or 0.0)
             manual_benefits = float(st.session_state.get("pf_manual_benefits", 0.0) or 0.0)
             manual_other_ssi = float(st.session_state.get("pf_manual_other_ssi", 0.0) or 0.0)
+
             manual_deductions_total = manual_taxes + manual_retirement + manual_benefits + manual_other_ssi
             net_income = total_income - manual_deductions_total
 
@@ -467,7 +476,7 @@ def render_personal_finance_dashboard():
     payroll_retirement = 0.0
     employer_match = 0.0
 
-    if income_is == "Gross (before tax)" and st.session_state.get("pf_gross_mode") == "Manual deductions":
+    if income_is == "Gross (before tax)" and gross_mode == "Manual deductions":
         payroll_retirement = float(st.session_state.get("pf_manual_retirement", 0.0) or 0.0)
         employer_match = float(st.session_state.get("pf_manual_match", 0.0) or 0.0)
 
