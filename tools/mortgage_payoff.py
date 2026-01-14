@@ -55,7 +55,7 @@ def _monthly_payment(principal: float, apr_pct: float, term_years: int) -> float
     if p <= 0:
         return 0.0
 
-    r = float(apr_pct) / 1000.0 / 12.0
+    r = float(apr_pct) / 100.0 / 12.0
     n = int(term_years * 12)
 
     if n <= 0:
