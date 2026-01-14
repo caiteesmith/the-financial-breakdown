@@ -298,31 +298,12 @@ def render_personal_finance_dashboard():
             )
             st.caption(
                 "For paycheck-level accuracy (pre-tax 401k contributions, employer match, benefits, and taxes), "
-                "use the Income Settings & Tax/Deduction Options section above."
+                "use the optional paycheck breakdown below."
             )
 
-            with tab_exp:
-                st.write("Split your expenses into fixed & variable so you can see what's flexible.")
-
-                with st.expander("Quick reality check to help your numbers be accurate", expanded=False):
-                    st.caption(
-                        "This dashboard is only as good as the inputs. Before you guess, take 5-10 minutes to be brutally honest "
-                        "and scan the last 1-2 months of statements."
-                    )
-
-                    st.markdown(
-                        """
-                            **Where to look**
-                            - Bank & credit card statements: Search for common merchants (Starbucks, Dunkin, Wawa, etc.)
-                            - Amazon: Check Subscribe & Save and recurring orders
-                            - Apple/Google subscriptions: iCloud / Google Drive storage, app subscriptions
-                            - Spotify/Netflix/HBO Max/Hulu/Paramount Plus/Peacock/YouTube Premium
-                            - Gym memberships, class packs, and any “trial turned paid”
-                            - Vitamins/supplements, skincare, contact supplies
-                            - Coffee runs, snacks, “little treats” (they add up fast)
-                        """
-                    )
-                    st.info("Tip: If something hits monthly (or “randomly but often”), it belongs here.")
+            # -------------------------
+            # Income editor (keep as form)
+            # -------------------------
             with st.form("pf_income_form", border=False):
                 income_edit = st.data_editor(
                     st.session_state["pf_income_df"],
@@ -341,6 +322,102 @@ def render_personal_finance_dashboard():
                         numeric_cols=["Monthly Amount"],
                     )
                     st.rerun()
+
+            st.write("")
+
+            # -------------------------
+            # Optional paycheck breakdown (DO NOT use st.form)
+            # -------------------------
+            with st.expander("Optional: Paycheck-level breakdown (gross → net)", expanded=False):
+                st.caption(
+                    "Only use this if your income numbers are **gross** and you want a more accurate net income calculation "
+                    "(taxes, benefits, retirement). These values will persist even if you switch pages."
+                )
+
+                # Persisted settings
+                st.session_state.setdefault("pf_income_is", "Net (after tax)")
+                st.session_state.setdefault("pf_tax_rate", 0.0)
+                st.session_state.setdefault("pf_gross_mode", "Estimate (tax rate)")
+
+                # Draft inputs (what the user is actively typing)
+                st.session_state.setdefault("pf_draft_taxes", 0.0)
+                st.session_state.setdefault("pf_draft_retirement", 0.0)
+                st.session_state.setdefault("pf_draft_benefits", 0.0)
+                st.session_state.setdefault("pf_draft_other_ssi", 0.0)
+                st.session_state.setdefault("pf_draft_match", 0.0)
+
+                # Saved inputs (what your calculations should use)
+                st.session_state.setdefault("pf_manual_taxes", 0.0)
+                st.session_state.setdefault("pf_manual_retirement", 0.0)
+                st.session_state.setdefault("pf_manual_benefits", 0.0)
+                st.session_state.setdefault("pf_manual_other_ssi", 0.0)
+                st.session_state.setdefault("pf_manual_match", 0.0)
+
+                c1, c2, c3 = st.columns([1, 1, 1], gap="large")
+                with c1:
+                    st.selectbox(
+                        "Income amounts are…",
+                        ["Net (after tax)", "Gross (before tax)"],
+                        key="pf_income_is",
+                    )
+                with c2:
+                    st.number_input(
+                        "Estimated effective tax rate (%)",
+                        min_value=0.0,
+                        max_value=60.0,
+                        step=0.5,
+                        key="pf_tax_rate",
+                        help="Used only if you choose the Estimate mode below.",
+                    )
+                with c3:
+                    st.radio(
+                        "How should we calculate net income?",
+                        ["Estimate (tax rate)", "Manual deductions"],
+                        key="pf_gross_mode",
+                        horizontal=True,
+                    )
+
+                manual_mode = (
+                    st.session_state["pf_income_is"] == "Gross (before tax)"
+                    and st.session_state["pf_gross_mode"] == "Manual deductions"
+                )
+
+                st.write("")
+                g1, g2, g3 = st.columns(3, gap="large")
+                with g1:
+                    st.number_input("Taxes", min_value=0.0, step=50.0, key="pf_draft_taxes", disabled=not manual_mode)
+                    st.number_input("Benefits", min_value=0.0, step=25.0, key="pf_draft_benefits", disabled=not manual_mode)
+
+                with g2:
+                    st.number_input("Retirement (employee)", min_value=0.0, step=50.0, key="pf_draft_retirement", disabled=not manual_mode)
+                    st.number_input("Other/SSI", min_value=0.0, step=25.0, key="pf_draft_other_ssi", disabled=not manual_mode)
+
+                with g3:
+                    st.number_input(
+                        "Company Match (optional)",
+                        min_value=0.0,
+                        step=50.0,
+                        key="pf_draft_match",
+                        help="Tracked as extra retirement contribution; does not reduce take-home.",
+                        disabled=not manual_mode,
+                    )
+
+                st.write("")
+                save_disabled = not manual_mode
+                if st.button("Save gross breakdown", width="stretch", disabled=save_disabled):
+                    # Copy drafts -> saved values used by calculations
+                    st.session_state["pf_manual_taxes"] = float(st.session_state["pf_draft_taxes"] or 0.0)
+                    st.session_state["pf_manual_benefits"] = float(st.session_state["pf_draft_benefits"] or 0.0)
+                    st.session_state["pf_manual_retirement"] = float(st.session_state["pf_draft_retirement"] or 0.0)
+                    st.session_state["pf_manual_other_ssi"] = float(st.session_state["pf_draft_other_ssi"] or 0.0)
+                    st.session_state["pf_manual_match"] = float(st.session_state["pf_draft_match"] or 0.0)
+                    st.success("Saved.")
+                    st.rerun()
+
+                if st.session_state["pf_income_is"] != "Gross (before tax)":
+                    st.info("Switch Income amounts to Gross if you want this to affect net income.")
+                elif st.session_state["pf_gross_mode"] != "Manual deductions":
+                    st.info("Using estimated tax rate. Switch to Manual deductions to enter exact amounts.")
 
         with tab_exp:
             st.markdown("**Fixed Expenses**")
