@@ -122,7 +122,11 @@ DEFAULT_INVESTING = [
 ]
 
 DEFAULT_DEBT = [
+    {"Debt": "Car loan", "Balance": 0.0, "APR %": 0.0, "Monthly Payment": 0.0, "Notes": ""},
     {"Debt": "Credit card", "Balance": 0.0, "APR %": 0.0, "Monthly Payment": 0.0, "Notes": ""},
+    {"Debt": "Student loan", "Balance": 0.0, "APR %": 0.0, "Monthly Payment": 0.0, "Notes": ""},
+    {"Debt": "Personal loan", "Balance": 0.0, "APR %": 0.0, "Monthly Payment": 0.0, "Notes": ""},
+    {"Debt": "Medical debt", "Balance": 0.0, "APR %": 0.0, "Monthly Payment": 0.0, "Notes": ""},
 ]
 
 DEFAULT_ASSETS = [
@@ -519,7 +523,7 @@ def render_personal_finance_dashboard():
 
     st.write("Your emergency minimum covers:")
     st.write(f"• **Fixed bills** (everything in your fixed expenses): {_money(fixed_total)}")
-    st.write(f"• **Essentials** (groceries, utilities, transportation): {_money(essential_variable)}")
+    st.write(f"• **Essentials** (groceries, utilities, healthcare): {_money(essential_variable)}")
     st.write(f"• **Debt payments** you must make: {_money(debt_minimums)}")
 
     st.divider()
