@@ -278,6 +278,10 @@ def render_personal_finance_dashboard():
             st.write(
                 "Add your income sources. If you have a two-income household, include both here."
             )
+            st.caption(
+                "Want to enter exact paycheck taxes and deductions? "
+                "You can do that in the Income Settings & Tax/Deduction Options section above."
+            )
             with tab_exp:
                 st.write("Split your expenses into fixed & variable so you can see what's flexible.")
 
