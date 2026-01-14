@@ -86,6 +86,8 @@ DEFAULT_SAVING = [
     {"Bucket": "Retirement", "Monthly Amount": 0.0, "Notes": ""},
     {"Bucket": "Brokerage", "Monthly Amount": 0.0, "Notes": ""},
     {"Bucket": "Emergency fund", "Monthly Amount": 0.0, "Notes": ""},
+    {"Bucket": "HSA", "Monthly Amount": 0.0, "Notes": ""},
+    {"Bucket": "Travel", "Monthly Amount": 0.0, "Notes": ""},
 ]
 
 DEFAULT_DEBT = [
@@ -212,7 +214,7 @@ def render_personal_finance_dashboard():
     # EDITORS (Forms = no reruns while typing)
     # -------------------------
     with left:
-        tab_income, tab_exp, tab_save = st.tabs(["Income", "Expenses", "Saving / Investing"])
+        tab_income, tab_exp, tab_save = st.tabs(["Income", "Expenses", "Saving/Investing"])
 
         with tab_income:
             st.write("Add your income sources (monthly amounts).")
@@ -277,7 +279,7 @@ def render_personal_finance_dashboard():
                         "Monthly Amount": st.column_config.NumberColumn(min_value=0.0, step=25.0, format="%.2f"),
                     },
                 )
-                saved_saving = st.form_submit_button("Save saving / investing", use_container_width=True)
+                saved_saving = st.form_submit_button("Save saving/investing", use_container_width=True)
                 if saved_saving:
                     st.session_state["pf_saving_df"] = saving_edit
 
@@ -373,46 +375,46 @@ def render_personal_finance_dashboard():
             st.markdown("### Your Summary")
 
             top_l, top_r = st.columns(2, gap="medium")
-            with top_l:
-                st.metric("Net Income (monthly)", _money(net_income))
+            # with top_l:
+            #     st.metric("Net Income (monthly)", _money(net_income))
 
-                if income_is == "Gross (before tax)":
-                    if st.session_state["pf_gross_mode"] == "Manual deductions":
-                        st.markdown(
-                            f"""
-                            <div style="
-                                background: rgba(255,255,255,0.03);
-                                border: 1px solid rgba(255,255,255,0.08);
-                                border-radius: 8px;
-                                padding: 6px 10px;
-                                font-size: 0.85rem;
-                                margin-top: 0.4rem;
-                            ">
-                                <div>Manual deductions applied: <strong>{_money(manual_deductions_total)}</strong></div>
-                                <div>Company match tracked: <strong>{_money(company_match)}</strong></div>
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
-                        if company_match > 0 or employee_retirement > 0:
-                            st.markdown(
-                                f"""
-                                <div style="
-                                    background: rgba(255,255,255,0.03);
-                                    border: 1px solid rgba(255,255,255,0.08);
-                                    border-radius: 8px;
-                                    padding: 6px 10px;
-                                    font-size: 0.85rem;
-                                    margin-top: 0.4rem;
-                                ">
-                                    <div>Total retirement contribution: {_money(total_retirement_contrib)}</strong></div>
-                                </div>
-                                """,
-                            unsafe_allow_html=True,
-                            )
-                    else:
-                        if float(tax_rate) > 0:
-                            st.caption(f"Estimated tax applied: {_money(est_tax)}")
+            #     if income_is == "Gross (before tax)":
+            #         if st.session_state["pf_gross_mode"] == "Manual deductions":
+            #             st.markdown(
+            #                 f"""
+            #                 <div style="
+            #                     background: rgba(255,255,255,0.03);
+            #                     border: 1px solid rgba(255,255,255,0.08);
+            #                     border-radius: 8px;
+            #                     padding: 6px 10px;
+            #                     font-size: 0.85rem;
+            #                     margin-top: 0.4rem;
+            #                 ">
+            #                     <div>Manual deductions applied: <strong>{_money(manual_deductions_total)}</strong></div>
+            #                     <div>Company match tracked: <strong>{_money(company_match)}</strong></div>
+            #                 </div>
+            #                 """,
+            #                 unsafe_allow_html=True,
+            #             )
+            #             if company_match > 0 or employee_retirement > 0:
+            #                 st.markdown(
+            #                     f"""
+            #                     <div style="
+            #                         background: rgba(255,255,255,0.03);
+            #                         border: 1px solid rgba(255,255,255,0.08);
+            #                         border-radius: 8px;
+            #                         padding: 6px 10px;
+            #                         font-size: 0.85rem;
+            #                         margin-top: 0.4rem;
+            #                     ">
+            #                         <div>Total retirement contribution: {_money(total_retirement_contrib)}</strong></div>
+            #                     </div>
+            #                     """,
+            #                 unsafe_allow_html=True,
+            #                 )
+            #         else:
+            #             if float(tax_rate) > 0:
+            #                 st.caption(f"Estimated tax applied: {_money(est_tax)}")
 
             with top_r:
                 st.metric("Left Over (monthly)", _money(remaining))
@@ -421,7 +423,7 @@ def render_personal_finance_dashboard():
             with mid_l:
                 st.metric("Total Expenses (monthly)", _money(expenses_total))
             with mid_r:
-                st.metric("Saving / Investing (monthly)", _money(saving_total))
+                st.metric("Saving/Investing (monthly)", _money(saving_total))
 
             safe_weekly = remaining / 4.33
             safe_daily = remaining / 30.4
@@ -433,11 +435,11 @@ def render_personal_finance_dashboard():
                 st.metric("Safe-to-spend (daily)", _money(safe_daily))
 
             if remaining < 0:
-                st.error("You’re budgeting more than you’re bringing in this month.")
+                st.error("You're budgeting more than you're bringing in this month.")
             elif remaining < 200:
-                st.warning("This month is very tight — you don’t have much buffer.")
+                st.warning("This month is very tight — you don't have much buffer.")
             else:
-                st.success("You’ve got some breathing room this month.")
+                st.success("You've got some breathing room this month.")
 
     st.divider()
     st.subheader("🆘 Your Emergency Minimum")
