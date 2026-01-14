@@ -177,7 +177,7 @@ def render_visual_overview(
 ):
     st.subheader("Visual Overview")
 
-    v1, v2 = st.columns(2, gap="large")
+    v1, v2, v3 = st.columns(3, gap="large")
 
     with v1:
         st.plotly_chart(
@@ -197,7 +197,8 @@ def render_visual_overview(
             width="stretch",
         )
 
-    st.plotly_chart(
-        top_expenses_bar(fixed_df, variable_df),
-        width="stretch",
-    )
+    with v3:
+        st.plotly_chart(
+            top_expenses_bar(fixed_df, variable_df),
+            width="stretch",
+        )

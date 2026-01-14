@@ -527,7 +527,7 @@ def render_personal_finance_dashboard():
 
             c5, c6 = st.columns(2, gap="medium")
             c5.metric("Total Expenses", _money(total_outflow))
-            c6.metric("Unallocated", _money(net_income - total_outflow))
+            c6.metric("Remaining", _money(net_income - total_outflow))
 
         st.write("")
 
