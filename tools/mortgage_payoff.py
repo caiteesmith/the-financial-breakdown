@@ -443,10 +443,9 @@ def render_mortgage_payoff_calculator():
         s2.metric("Months Saved", f"{months_saved:,}")
 
         if baseline_payoff_date and payoff_date:
-            st.caption(
-                f"Baseline payoff: **{baseline_payoff_date.strftime('%B %Y')}** • "
-                f"With extra: **{payoff_date.strftime('%B %Y')}**"
-            )
+            c1, c2 = st.columns(2, gap="large")
+            c1.metric("Original payoff", baseline_payoff_date.strftime("%b %Y"))
+            c2.metric("Payoff with extra", payoff_date.strftime("%b %Y"))
 
         # PMI drop message + updated housing cost after PMI
         if pmi_drop_date:
