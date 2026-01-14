@@ -7,16 +7,18 @@ from datetime import datetime
 from typing import Dict, List
 
 import pandas as pd
-import streamlit as st
 import plotly.graph_objects as go
 import re
-from tools.pf_visuals import render_visual_overview
+import streamlit as st
+
+from tools.pf_visuals import cashflow_breakdown_chart, render_visual_overview
+
 
 # -------------------------
 # Helpers
 # -------------------------
 def _money(x: float) -> str:
-    return f"${x:,.2f}"
+    return f"${float(x or 0.0):,.2f}"
 
 
 def _sum_df(df: pd.DataFrame, col: str) -> float:
@@ -27,11 +29,23 @@ def _sum_df(df: pd.DataFrame, col: str) -> float:
 
 def _download_json_button(label: str, payload: Dict, filename: str):
     s = pd.Series(payload).to_json(indent=2)
-    st.download_button(label, data=s, file_name=filename, mime="application/json", use_container_width=True)
+    st.download_button(
+        label,
+        data=s,
+        file_name=filename,
+        mime="application/json",
+        use_container_width=True,
+    )
 
 
 def _download_csv_button(label: str, df: pd.DataFrame, filename: str):
-    st.download_button(label, data=df.to_csv(index=False), file_name=filename, mime="text/csv", use_container_width=True)
+    st.download_button(
+        label,
+        data=df.to_csv(index=False),
+        file_name=filename,
+        mime="text/csv",
+        use_container_width=True,
+    )
 
 
 def _norm(s: object) -> str:
@@ -84,64 +98,6 @@ def _sanitize_editor_df(df: pd.DataFrame, expected_cols: List[str], numeric_cols
 
     df = df.reset_index(drop=True)
     return df
-
-def _cashflow_breakdown_chart(
-    *,
-    net_income: float,
-    living_expenses: float,
-    debt_payments: float,
-    saving: float,
-    investing_cashflow: float,
-):
-    """
-    Single stacked bar showing where monthly income goes.
-    - If spending exceeds income, shows 'Over budget' instead of negative remainder.
-    """
-    # Normalize negatives to avoid confusing stacks
-    net_income = float(net_income or 0.0)
-    living_expenses = max(float(living_expenses or 0.0), 0.0)
-    debt_payments = max(float(debt_payments or 0.0), 0.0)
-    saving = max(float(saving or 0.0), 0.0)
-    investing_cashflow = max(float(investing_cashflow or 0.0), 0.0)
-
-    total_outflow = living_expenses + debt_payments + saving + investing_cashflow
-    remaining = net_income - total_outflow
-
-    # If negative, show as "Over budget" instead of negative remainder
-    remainder_value = max(remaining, 0.0)
-    over_budget_value = max(-remaining, 0.0)
-
-    labels = ["Living expenses", "Debt payments", "Saving", "Investing", "Remaining"]
-    values = [living_expenses, debt_payments, saving, investing_cashflow, remainder_value]
-
-    if over_budget_value > 0:
-        labels.append("Over budget")
-        values.append(over_budget_value)
-
-    fig = go.Figure()
-
-    for label, val in zip(labels, values):
-        fig.add_trace(
-            go.Bar(
-                name=label,
-                y=[""],
-                x=[val],
-                orientation="h",
-                hovertemplate=f"{label}: %{{x:,.2f}}<extra></extra>",
-            )
-        )
-
-    fig.update_layout(
-        barmode="stack",
-        height=110,
-        margin=dict(l=10, r=10, t=10, b=10),
-        showlegend=True,
-        legend=dict(orientation="h", yanchor="bottom", y=1.15, xanchor="left", x=0),
-        xaxis=dict(title="", tickprefix="$", separatethousands=True),
-        yaxis=dict(title="", showticklabels=False),
-    )
-
-    return fig, total_outflow, remaining
 
 
 # -------------------------
@@ -282,8 +238,18 @@ def render_personal_finance_dashboard():
                     st.number_input("Benefits (monthly)", min_value=0.0, step=25.0, key="pf_manual_benefits")
 
                 with g2:
-                    st.number_input("Retirement (employee, monthly)", min_value=0.0, step=50.0, key="pf_manual_retirement")
-                    st.number_input("Other/SSI (monthly)", min_value=0.0, step=25.0, key="pf_manual_other_ssi")
+                    st.number_input(
+                        "Retirement (employee, monthly)",
+                        min_value=0.0,
+                        step=50.0,
+                        key="pf_manual_retirement",
+                    )
+                    st.number_input(
+                        "Other/SSI (monthly)",
+                        min_value=0.0,
+                        step=25.0,
+                        key="pf_manual_other_ssi",
+                    )
 
                 with g3:
                     st.number_input(
@@ -300,26 +266,12 @@ def render_personal_finance_dashboard():
         else:
             st.info("Using estimated tax rate. Switch to Manual deductions if you want to specify exact amounts.")
 
-    # =========================
-    # MONTHLY SNAPSHOT CHART
-    # =========================
-    render_visual_overview(
-        expenses_total=expenses_total,
-        total_monthly_debt_payments=total_monthly_debt_payments,
-        saving_total=saving_total,
-        investing_cashflow=investing_cashflow,
-        remaining=remaining,
-        fixed_df=st.session_state["pf_fixed_df"],
-        variable_df=st.session_state["pf_variable_df"],
-        debt_df=st.session_state["pf_debt_df"],
-    )
-
     # -------------------------
     # EDITORS
     # -------------------------
     st.subheader("Your Monthly Cash Flow")
     left, right = st.columns([1.1, 0.9], gap="large")
-    
+
     with left:
         tab_income, tab_exp, tab_save = st.tabs(["Income", "Expenses", "Saving/Investing"])
 
@@ -433,7 +385,9 @@ def render_personal_finance_dashboard():
                         )
                         st.rerun()
 
-    # ---- Calculations ----
+    # -------------------------
+    # CALCULATIONS (after editors, using latest session_state)
+    # -------------------------
     income_df = st.session_state["pf_income_df"]
     fixed_df = st.session_state["pf_fixed_df"]
     variable_df = st.session_state["pf_variable_df"]
@@ -445,12 +399,13 @@ def render_personal_finance_dashboard():
 
     total_income = _sum_df(income_df, "Monthly Amount")
 
+    # Net income
     est_tax = 0.0
     manual_deductions_total = 0.0
     net_income = total_income
 
     if income_is == "Gross (before tax)":
-        if st.session_state["pf_gross_mode"] == "Estimate (tax rate)":
+        if st.session_state.get("pf_gross_mode") == "Estimate (tax rate)":
             if float(tax_rate) > 0:
                 est_tax = total_income * (float(tax_rate) / 100.0)
             net_income = total_income - est_tax
@@ -470,21 +425,23 @@ def render_personal_finance_dashboard():
     investing_total = _sum_df(investing_df, "Monthly Amount")
 
     investing_display = investing_total
-    investing_cashflow = investing_total
+    investing_cashflow = investing_total  # cash leaving checking/budget this month
 
     manual_retirement = 0.0
     company_match = 0.0
-    manual_investing_total = 0.0
 
     if income_is == "Gross (before tax)" and st.session_state.get("pf_gross_mode") == "Manual deductions":
         manual_retirement = float(st.session_state.get("pf_manual_retirement", 0.0) or 0.0)
         company_match = float(st.session_state.get("pf_manual_match", 0.0) or 0.0)
 
-        manual_investing_total = manual_retirement + company_match
-        investing_display = investing_total + manual_investing_total
+        # display includes retirement + match
+        investing_display = investing_total + manual_retirement + company_match
 
-    total_saving_and_investing_cashflow = saving_total + investing_cashflow
+        # cashflow only includes employee retirement (match doesn't reduce take-home)
+        investing_cashflow = investing_total + manual_retirement
+
     total_monthly_debt_payments = _sum_df(debt_df, "Monthly Payment")
+    total_saving_and_investing_cashflow = saving_total + investing_cashflow
 
     total_outflow = expenses_total + total_saving_and_investing_cashflow + total_monthly_debt_payments
     remaining = net_income - total_outflow
@@ -493,142 +450,60 @@ def render_personal_finance_dashboard():
     total_liabilities = _sum_df(liabilities_df, "Value")
     net_worth = total_assets - total_liabilities
 
-    total_monthly_debt_payments = _sum_df(debt_df, "Monthly Payment")
-
     employee_retirement = float(st.session_state.get("pf_manual_retirement", 0.0) or 0.0)
     company_match = float(st.session_state.get("pf_manual_match", 0.0) or 0.0)
     total_retirement_contrib = employee_retirement + company_match
 
     # -------------------------
-    # DATA VISUALIZATIONS
+    # SNAPSHOT CHART (now safe — variables exist)
     # -------------------------
+    st.subheader("This Month at a Glance")
+    fig, _, _ = cashflow_breakdown_chart(
+        net_income=net_income,
+        living_expenses=expenses_total,
+        debt_payments=total_monthly_debt_payments,
+        saving=saving_total,
+        investing_cashflow=investing_cashflow,
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
-    def spending_mix_donut(
-        expenses: float,
-        debt: float,
-        saving: float,
-        investing: float,
-        remaining: float,
-    ):
-        labels = []
-        values = []
-
-        for label, val in [
-            ("Living expenses", expenses),
-            ("Debt payments", debt),
-            ("Saving", saving),
-            ("Investing", investing),
-        ]:
-            if val > 0:
-                labels.append(label)
-                values.append(val)
-
-        if remaining > 0:
-            labels.append("Remaining")
-            values.append(remaining)
-
-        fig = go.Figure(
-            data=[
-                go.Pie(
-                    labels=labels,
-                    values=values,
-                    hole=0.55,
-                    hovertemplate="%{label}: $%{value:,.0f}<extra></extra>",
-                )
-            ]
-        )
-
-        fig.update_layout(
-            title=dict(
-                text="Monthly Cash Flow Breakdown",
-                x=0,
-                xanchor="left",
-                font=dict(size=16),
-            ),
-            height=280,
-            margin=dict(t=50, b=20, l=20, r=20),
-            showlegend=True,
-        )
-
-        return fig
-    
-    def top_expenses_bar(fixed_df: pd.DataFrame, variable_df: pd.DataFrame):
-        df = pd.concat(
-            [
-                fixed_df[["Expense", "Monthly Amount"]],
-                variable_df[["Expense", "Monthly Amount"]],
-            ],
-            ignore_index=True,
-        )
-
-        df = (
-            df.groupby("Expense", as_index=False)["Monthly Amount"]
-            .sum()
-            .sort_values("Monthly Amount", ascending=False)
-            .head(8)
-        )
-
-        fig = go.Figure(
-            go.Bar(
-                x=df["Monthly Amount"],
-                y=df["Expense"],
-                orientation="h",
-                hovertemplate="%{y}: $%{x:,.0f}<extra></extra>",
-            )
-        )
-
-        fig.update_layout(
-            title=dict(
-                text="Top Monthly Expenses",
-                x=0,
-                xanchor="left",
-                font=dict(size=16),
-            ),
-            height=300,
-            margin=dict(l=120, r=20, t=50, b=20),
-            xaxis=dict(tickprefix="$", separatethousands=True),
-            yaxis=dict(autorange="reversed"),
-        )
-
-        return fig
-    
-    st.subheader("Visual Overview")
-
-    v1, v2 = st.columns(2, gap="large")
-
-    with v1:
-        st.plotly_chart(
-            spending_mix_donut(
-                expenses_total,
-                total_monthly_debt_payments,
-                saving_total,
-                investing_cashflow,
-                remaining,
-            ),
-            use_container_width=True,
-        )
-
-    with v2:
-        st.plotly_chart(
-            debt_payments_vs_balances(st.session_state["pf_debt_df"]),
-            use_container_width=True,
-        )
-
-    st.plotly_chart(
-        top_expenses_bar(
-            st.session_state["pf_fixed_df"],
-            st.session_state["pf_variable_df"],
-        ),
-        use_container_width=True,
+    # -------------------------
+    # VISUAL OVERVIEW (now safe — variables exist)
+    # -------------------------
+    render_visual_overview(
+        expenses_total=expenses_total,
+        total_monthly_debt_payments=total_monthly_debt_payments,
+        saving_total=saving_total,
+        investing_cashflow=investing_cashflow,
+        remaining=remaining,
+        fixed_df=fixed_df,
+        variable_df=variable_df,
+        debt_df=debt_df,
     )
 
     # ---- Emergency Minimum ----
     ESSENTIAL_VARIABLE_KEYWORDS = [
-        "grocery", "groceries",
-        "electric", "electricity", "natural gas", "water", "sewer", "trash", "garbage",
-        "utility", "utilities",
-        "internet", "wifi", "phone", "cell",
-        "insurance", "medical", "health", "prescription", "rx", "medicine"
+        "grocery",
+        "groceries",
+        "electric",
+        "electricity",
+        "natural gas",
+        "water",
+        "sewer",
+        "trash",
+        "garbage",
+        "utility",
+        "utilities",
+        "internet",
+        "wifi",
+        "phone",
+        "cell",
+        "insurance",
+        "medical",
+        "health",
+        "prescription",
+        "rx",
+        "medicine",
     ]
 
     essential_variable = _sum_by_keywords(
@@ -638,33 +513,8 @@ def render_personal_finance_dashboard():
         keywords=ESSENTIAL_VARIABLE_KEYWORDS,
     )
 
-    debt_minimums = _sum_df(debt_df, "Monthly Payment")
+    debt_minimums = total_monthly_debt_payments
     emergency_minimum_monthly = fixed_total + essential_variable + debt_minimums
-
-    # ---- Summary card styling ----
-    st.markdown(
-        """
-        <style>
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(#pf-summary-card) {
-            background: #161B22 !important;
-            border: 1px solid rgba(255,255,255,.10) !important;
-            border-radius: 16px !important;
-            padding: 14px 14px 10px 14px !important;
-            margin-top: 6px;
-        }
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(#pf-summary-card) h3 {
-            margin-top: 0.15rem !important;
-            margin-bottom: 0.85rem !important;
-        }
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(#pf-summary-card)
-        div[data-testid="metric-container"] {
-            background: rgba(255,255,255,.02) !important;
-            border: 1px solid rgba(255,255,255,.08) !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
 
     # ---- Summary UI ----
     def _section(title: str):
@@ -676,23 +526,6 @@ def render_personal_finance_dashboard():
     with right:
         st.markdown("### Summary")
 
-        # optional: tighter spacing inside right column
-        st.markdown(
-            """
-            <style>
-            /* tighten vertical whitespace in the summary column */
-            div[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stMetric"]) {
-                margin-bottom: .35rem;
-            }
-            /* make metric labels slightly softer */
-            div[data-testid="stMetricLabel"] > div {
-                opacity: .80;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
-
         # Income
         with st.container(border=True):
             _section("Income")
@@ -700,7 +533,7 @@ def render_personal_finance_dashboard():
             c1.metric("Net Income (monthly)", _money(net_income))
             c2.metric("Total Income", _money(total_income))
 
-        st.write("")  # spacing
+        st.write("")
 
         # Outflows
         with st.container(border=True):
@@ -725,7 +558,6 @@ def render_personal_finance_dashboard():
             c1, c2 = st.columns(2, gap="medium")
             c1.metric("Monthly", _money(remaining))
             c2.metric("Weekly", _money(remaining / 4.33))
-
             c3, _ = st.columns(2, gap="medium")
             c3.metric("Daily", _money(remaining / 30.4))
 
@@ -834,47 +666,6 @@ def render_personal_finance_dashboard():
             st.rerun()
 
     st.metric("Total Monthly Debt Payments", _money(total_monthly_debt_payments))
-
-    def debt_payments_vs_balances(debt_df: pd.DataFrame):
-        df = debt_df.copy()
-        df = df[(df["Balance"] > 0) | (df["Monthly Payment"] > 0)]
-
-        fig = go.Figure()
-
-        fig.add_bar(
-            x=df["Debt"],
-            y=df["Monthly Payment"],
-            name="Monthly Payment",
-            hovertemplate="%{x}<br>Payment: $%{y:,.0f}<extra></extra>",
-        )
-
-        fig.add_bar(
-            x=df["Debt"],
-            y=df["Balance"],
-            name="Balance",
-            hovertemplate="%{x}<br>Balance: $%{y:,.0f}<extra></extra>",
-        )
-
-        fig.update_layout(
-            title=dict(
-                text="Debt Payments vs. Outstanding Balances",
-                x=0,
-                xanchor="left",
-                font=dict(size=16),
-            ),
-            barmode="group",
-            height=300,
-            margin=dict(l=20, r=20, t=50, b=40),
-            yaxis=dict(tickprefix="$", separatethousands=True),
-        )
-
-        return fig
-    
-    st.subheader("Visual Overview")
-    st.plotly_chart(
-        debt_payments_vs_balances(st.session_state["pf_debt_df"]),
-        use_container_width=True,
-    )
 
     st.divider()
 

@@ -5,7 +5,68 @@ import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
 
+# tools/pf_visuals.py
+from __future__ import annotations
 
+import plotly.graph_objects as go
+
+# CASHFLOW BREAKDOWN BAR CHART
+def cashflow_breakdown_chart(
+    *,
+    net_income: float,
+    living_expenses: float,
+    debt_payments: float,
+    saving: float,
+    investing_cashflow: float,
+):
+    """
+    Single stacked bar showing where monthly income goes.
+    - If spending exceeds income, shows 'Over budget' instead of negative remainder.
+    """
+    net_income = float(net_income or 0.0)
+    living_expenses = max(float(living_expenses or 0.0), 0.0)
+    debt_payments = max(float(debt_payments or 0.0), 0.0)
+    saving = max(float(saving or 0.0), 0.0)
+    investing_cashflow = max(float(investing_cashflow or 0.0), 0.0)
+
+    total_outflow = living_expenses + debt_payments + saving + investing_cashflow
+    remaining = net_income - total_outflow
+
+    remainder_value = max(remaining, 0.0)
+    over_budget_value = max(-remaining, 0.0)
+
+    labels = ["Living expenses", "Debt payments", "Saving", "Investing", "Remaining"]
+    values = [living_expenses, debt_payments, saving, investing_cashflow, remainder_value]
+
+    if over_budget_value > 0:
+        labels.append("Over budget")
+        values.append(over_budget_value)
+
+    fig = go.Figure()
+    for label, val in zip(labels, values):
+        fig.add_trace(
+            go.Bar(
+                name=label,
+                y=[""],
+                x=[val],
+                orientation="h",
+                hovertemplate=f"{label}: $%{{x:,.0f}}<extra></extra>",
+            )
+        )
+
+    fig.update_layout(
+        barmode="stack",
+        height=110,
+        margin=dict(l=10, r=10, t=10, b=10),
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=1.15, xanchor="left", x=0),
+        xaxis=dict(title="", tickprefix="$", separatethousands=True),
+        yaxis=dict(title="", showticklabels=False),
+    )
+
+    return fig, total_outflow, remaining
+
+# SPENDING MIX DONUT CHART
 def spending_mix_donut(expenses: float, debt: float, saving: float, investing: float, remaining: float):
     labels, values = [], []
 
@@ -36,7 +97,7 @@ def spending_mix_donut(expenses: float, debt: float, saving: float, investing: f
     )
     return fig
 
-
+# TOP EXPENSES BAR CHART
 def top_expenses_bar(fixed_df: pd.DataFrame, variable_df: pd.DataFrame):
     df = pd.concat(
         [fixed_df[["Expense", "Monthly Amount"]], variable_df[["Expense", "Monthly Amount"]]],
@@ -68,7 +129,7 @@ def top_expenses_bar(fixed_df: pd.DataFrame, variable_df: pd.DataFrame):
     )
     return fig
 
-
+# DEBT PAYMENTS VS BALANCES BAR CHART
 def debt_payments_vs_balances(debt_df: pd.DataFrame):
     df = debt_df.copy()
 
