@@ -70,7 +70,7 @@ def cashflow_breakdown_chart(
             zeroline=False,
             fixedrange=True,
             automargin=False,          
-            ticklabelposition="outside",
+            ticklabelposition="inside",
             domain=[0, 1],           
         ),
         yaxis=dict(
