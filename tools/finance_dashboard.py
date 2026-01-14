@@ -308,18 +308,39 @@ def render_personal_finance_dashboard():
                     st.success("Saved.")
                     st.rerun()
 
+                def _stat(label: str, value: float):
+                    st.markdown(
+                        f"""
+                        <div style="
+                            padding: 0.75rem 0.9rem;
+                            border: 1px solid rgba(255,255,255,0.10);
+                            border-radius: 14px;
+                            background: rgba(255,255,255,0.03);
+                            ">
+                            <div style="font-size: 0.85rem; opacity: 0.75; margin-bottom: 0.25rem;">
+                                {label}
+                            </div>
+                            <div style="font-size: 1.75rem; font-weight: 700; line-height: 1.15;">
+                                {_money(value)}
+                            </div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
                 with st.container(border=True):
                     st.markdown("**Saved deductions being used**")
 
                     m1, m2, m3, m4 = st.columns(4, gap="medium")
-                    m1.metric("Taxes", _money(st.session_state["pf_manual_taxes"]))
-                    m2.metric("Benefits", _money(st.session_state["pf_manual_benefits"]))
-                    m3.metric("Retirement", _money(st.session_state["pf_manual_retirement"]))
-                    m4.metric("Other/SSI", _money(st.session_state["pf_manual_other_ssi"]))
+                    with m1: _stat("Taxes", st.session_state["pf_manual_taxes"])
+                    with m2: _stat("Benefits", st.session_state["pf_manual_benefits"])
+                    with m3: _stat("Retirement", st.session_state["pf_manual_retirement"])
+                    with m4: _stat("Other/SSI", st.session_state["pf_manual_other_ssi"])
 
                     st.divider()
                     st.caption("Company match doesn't reduce take-home. It's tracked separately.")
-                    st.metric("Company Match (tracked)", _money(st.session_state["pf_manual_match"]))
+                    _stat("Company Match (tracked)", st.session_state["pf_manual_match"])
+
 
         with tab_exp:
             st.markdown("**Fixed Expenses**")
