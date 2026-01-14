@@ -54,7 +54,7 @@ def cashflow_breakdown_chart(
     fig.update_layout(
         barmode="stack",
         height=110,
-        margin=dict(l=10, r=10, t=10, b=10),
+        margin=dict(l=0, r=0, t=8, b=0),
         showlegend=True,
         legend=dict(
             orientation="h",
@@ -63,8 +63,21 @@ def cashflow_breakdown_chart(
             xanchor="left",
             x=0,
         ),
-        xaxis=dict(title="", tickprefix="$", separatethousands=True),
-        yaxis=dict(title="", showticklabels=False),
+        yaxis=dict(
+            title="",
+            showticklabels=False,
+            showgrid=False,
+            zeroline=False,
+            fixedrange=True,
+        ),
+        xaxis=dict(
+            title="",
+            range=[0, max(net_income, total_outflow)],
+            tickprefix="$",
+            separatethousands=True,
+            showgrid=False,
+            zeroline=False,
+        )
     )
 
     return fig, total_outflow, remaining

@@ -123,7 +123,7 @@ DEFAULT_VARIABLE = [
     {"Expense": "Gas/Transit", "Monthly Amount": 0.0, "Notes": ""},
     {"Expense": "Dining out", "Monthly Amount": 0.0, "Notes": ""},
     {"Expense": "Subscriptions", "Monthly Amount": 0.0, "Notes": ""},
-    {"Expense": "Prescription", "Monthly Amount": 0.0, "Notes": ""},
+    {"Expense": "Prescriptions", "Monthly Amount": 0.0, "Notes": ""},
     {"Expense": "Childcare", "Monthly Amount": 0.0, "Notes": ""},
     {"Expense": "Gym/Fitness", "Monthly Amount": 0.0, "Notes": ""},
     {"Expense": "TP Fund", "Monthly Amount": 0.0, "Notes": ""},
