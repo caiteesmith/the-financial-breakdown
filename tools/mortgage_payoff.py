@@ -364,6 +364,25 @@ def render_mortgage_payoff_calculator():
                 extra_one_time_month_index=int(extra_one_time_month),
                 max_months=2000,  # generous safety cap
             )
+
+            baseline_result = build_amortization_schedule(
+                principal=float(principal),
+                apr_pct=float(apr),
+                monthly_payment=float(monthly_payment),
+                start_date=start_date,
+                extra_monthly=0.0,
+                extra_one_time=0.0,
+                extra_one_time_month_index=0,
+                max_months=2000,
+            )
+
+            baseline_months = baseline_result.months
+            baseline_interest = float(baseline_result.total_interest)
+
+            interest_saved = max(0.0, baseline_interest - float(result.total_interest))
+            months_saved = max(0, baseline_months - int(months))
+
+            baseline_payoff_date = baseline_result.payoff_date
         except ValueError as e:
             st.error(str(e))
             st.stop()
@@ -404,6 +423,16 @@ def render_mortgage_payoff_calculator():
 
         r2c1.metric("Payoff (months)", f"{months:,}")
         r2c2.metric("Total Interest Paid", _money(result.total_interest))
+
+        s1, s2 = st.columns(2, gap="large")
+        s1.metric("Interest Saved (vs no extra)", _money(interest_saved))
+        s2.metric("Months Saved", f"{months_saved:,}")
+
+        if baseline_payoff_date and payoff_date:
+            st.caption(
+                f"Baseline payoff: **{baseline_payoff_date.strftime('%B %Y')}** • "
+                f"With extra: **{payoff_date.strftime('%B %Y')}**"
+            )
 
         # PMI drop message + updated housing cost after PMI
         if pmi_drop_date:
