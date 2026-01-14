@@ -213,76 +213,6 @@ def render_personal_finance_dashboard():
     _ensure_df("pf_assets_df", DEFAULT_ASSETS)
     _ensure_df("pf_liabilities_df", DEFAULT_LIABILITIES)
 
-    # ---- Settings ----
-    # with st.expander("Income Settings & Tax/Deduction Options", expanded=False):
-    #     st.caption(
-    #         "Choose whether your income is entered as net or gross. "
-    #         "If you enter gross income, you can estimate taxes or define exact monthly deductions below."
-    #     )
-    #     c1, c2, c3 = st.columns([1, 1, 1], gap="large")
-    #     with c1:
-    #         month_label = st.text_input("Month label", key="pf_month_label")
-    #     with c2:
-    #         tax_rate = st.number_input(
-    #             "Estimated effective tax rate (%)",
-    #             min_value=0.0,
-    #             max_value=60.0,
-    #             step=0.5,
-    #             key="pf_tax_rate",
-    #             help="Optional. If you enter *gross* income, this helps estimate post-tax cash flow.",
-    #         )
-    #     with c3:
-    #         income_is = st.selectbox(
-    #             "Income amounts are…",
-    #             ["Net (after tax)", "Gross (before tax)"],
-    #             key="pf_income_is",
-    #         )
-
-    #     # ---- Gross Breakdown ----
-    #     if income_is == "Gross (before tax)":
-    #         st.subheader("Gross Income Breakdown (monthly)")
-    #         st.caption(
-    #             "Use this section only if you want to enter your income as gross, e.g. a paycheck breakdown. "
-    #             "You can estimate taxes or enter exact monthly deductions for more accurate cash flow."
-    #         )
-    #         st.radio(
-    #             "How should we calculate net income?",
-    #             ["Estimate (tax rate)", "Manual deductions"],
-    #             key="pf_gross_mode",
-    #             horizontal=True,
-    #         )
-
-    #         with st.form("pf_gross_breakdown_form", border=False):
-    #             manual_mode = st.session_state.get("pf_gross_mode") == "Manual deductions"
-
-    #             g1, g2, g3 = st.columns(3, gap="large")
-    #             with g1:
-    #                 st.number_input("Taxes", min_value=0.0, step=50.0, key="pf_manual_taxes", disabled=not manual_mode)
-    #                 st.number_input("Benefits", min_value=0.0, step=25.0, key="pf_manual_benefits", disabled=not manual_mode)
-
-    #             with g2:
-    #                 st.number_input("Retirement (employee)", min_value=0.0, step=50.0, key="pf_manual_retirement", disabled=not manual_mode)
-    #                 st.number_input("Other/SSI", min_value=0.0, step=25.0, key="pf_manual_other_ssi", disabled=not manual_mode)
-
-    #             with g3:
-    #                 st.number_input(
-    #                     "Company Match (optional)",
-    #                     min_value=0.0,
-    #                     step=50.0,
-    #                     key="pf_manual_match",
-    #                     help="Tracked as extra retirement contribution; does not reduce take-home.",
-    #                     disabled=not manual_mode,
-    #                 )
-
-    #             submitted = st.form_submit_button("Save gross breakdown", width="stretch", disabled=not manual_mode)
-
-    #             if submitted:
-    #                 st.success("Saved.")
-    #                 st.rerun()
-
-    #         if st.session_state.get("pf_gross_mode") != "Manual deductions":
-    #             st.info("Using estimated tax rate. Switch to Manual deductions if you want to specify exact amounts.")
-
     # -------------------------
     # EDITORS
     # -------------------------
@@ -326,71 +256,37 @@ def render_personal_finance_dashboard():
             st.write("")
 
             # -------------------------
-            # Optional paycheck breakdown (DO NOT use st.form)
+            # Optional paycheck breakdown
             # -------------------------
             with st.expander("Optional: Paycheck-level breakdown (gross → net)", expanded=False):
                 st.caption(
-                    "Only use this if your income numbers are **gross** and you want a more accurate net income calculation "
-                    "(taxes, benefits, retirement). These values will persist even if you switch pages."
+                    "Use this only if the income you entered above is **gross** and you want the dashboard to calculate "
+                    "**net income** using exact monthly deductions (taxes, benefits, retirement)."
                 )
 
-                # Persisted settings
-                st.session_state.setdefault("pf_income_is", "Net (after tax)")
-                st.session_state.setdefault("pf_tax_rate", 0.0)
-                st.session_state.setdefault("pf_gross_mode", "Estimate (tax rate)")
-
-                # Draft inputs (what the user is actively typing)
+                # ---- Persisted draft inputs (what the user is typing) ----
                 st.session_state.setdefault("pf_draft_taxes", 0.0)
                 st.session_state.setdefault("pf_draft_retirement", 0.0)
                 st.session_state.setdefault("pf_draft_benefits", 0.0)
                 st.session_state.setdefault("pf_draft_other_ssi", 0.0)
                 st.session_state.setdefault("pf_draft_match", 0.0)
 
-                # Saved inputs (what your calculations should use)
+                # ---- Persisted saved inputs (what calculations use) ----
                 st.session_state.setdefault("pf_manual_taxes", 0.0)
                 st.session_state.setdefault("pf_manual_retirement", 0.0)
                 st.session_state.setdefault("pf_manual_benefits", 0.0)
                 st.session_state.setdefault("pf_manual_other_ssi", 0.0)
                 st.session_state.setdefault("pf_manual_match", 0.0)
 
-                c1, c2, c3 = st.columns([1, 1, 1], gap="large")
-                with c1:
-                    st.selectbox(
-                        "Income amounts are…",
-                        ["Net (after tax)", "Gross (before tax)"],
-                        key="pf_income_is",
-                    )
-                with c2:
-                    st.number_input(
-                        "Estimated effective tax rate (%)",
-                        min_value=0.0,
-                        max_value=60.0,
-                        step=0.5,
-                        key="pf_tax_rate",
-                        help="Used only if you choose the Estimate mode below.",
-                    )
-                with c3:
-                    st.radio(
-                        "How should we calculate net income?",
-                        ["Estimate (tax rate)", "Manual deductions"],
-                        key="pf_gross_mode",
-                        horizontal=True,
-                    )
-
-                manual_mode = (
-                    st.session_state["pf_income_is"] == "Gross (before tax)"
-                    and st.session_state["pf_gross_mode"] == "Manual deductions"
-                )
-
-                st.write("")
                 g1, g2, g3 = st.columns(3, gap="large")
+
                 with g1:
-                    st.number_input("Taxes", min_value=0.0, step=50.0, key="pf_draft_taxes", disabled=not manual_mode)
-                    st.number_input("Benefits", min_value=0.0, step=25.0, key="pf_draft_benefits", disabled=not manual_mode)
+                    st.number_input("Taxes", min_value=0.0, step=50.0, key="pf_draft_taxes")
+                    st.number_input("Benefits", min_value=0.0, step=25.0, key="pf_draft_benefits")
 
                 with g2:
-                    st.number_input("Retirement (employee)", min_value=0.0, step=50.0, key="pf_draft_retirement", disabled=not manual_mode)
-                    st.number_input("Other/SSI", min_value=0.0, step=25.0, key="pf_draft_other_ssi", disabled=not manual_mode)
+                    st.number_input("Retirement (employee)", min_value=0.0, step=50.0, key="pf_draft_retirement")
+                    st.number_input("Other/SSI", min_value=0.0, step=25.0, key="pf_draft_other_ssi")
 
                 with g3:
                     st.number_input(
@@ -399,12 +295,10 @@ def render_personal_finance_dashboard():
                         step=50.0,
                         key="pf_draft_match",
                         help="Tracked as extra retirement contribution; does not reduce take-home.",
-                        disabled=not manual_mode,
                     )
 
                 st.write("")
-                save_disabled = not manual_mode
-                if st.button("Save gross breakdown", width="stretch", disabled=save_disabled):
+                if st.button("Save gross breakdown", width="stretch"):
                     # Copy drafts -> saved values used by calculations
                     st.session_state["pf_manual_taxes"] = float(st.session_state["pf_draft_taxes"] or 0.0)
                     st.session_state["pf_manual_benefits"] = float(st.session_state["pf_draft_benefits"] or 0.0)
@@ -414,10 +308,13 @@ def render_personal_finance_dashboard():
                     st.success("Saved.")
                     st.rerun()
 
-                if st.session_state["pf_income_is"] != "Gross (before tax)":
-                    st.info("Switch Income amounts to Gross if you want this to affect net income.")
-                elif st.session_state["pf_gross_mode"] != "Manual deductions":
-                    st.info("Using estimated tax rate. Switch to Manual deductions to enter exact amounts.")
+                st.caption(
+                    f"Saved deductions being used: "
+                    f"Taxes ${st.session_state['pf_manual_taxes']:,.0f}, "
+                    f"Benefits ${st.session_state['pf_manual_benefits']:,.0f}, "
+                    f"Retirement ${st.session_state['pf_manual_retirement']:,.0f}, "
+                    f"Other/SSI ${st.session_state['pf_manual_other_ssi']:,.0f}."
+                )
 
         with tab_exp:
             st.markdown("**Fixed Expenses**")
@@ -520,25 +417,17 @@ def render_personal_finance_dashboard():
 
     total_income = _sum_df(income_df, "Monthly Amount")
 
+    manual_taxes = float(st.session_state.get("pf_manual_taxes", 0.0) or 0.0)
+    manual_retirement = float(st.session_state.get("pf_manual_retirement", 0.0) or 0.0)
+    manual_benefits = float(st.session_state.get("pf_manual_benefits", 0.0) or 0.0)
+    manual_other_ssi = float(st.session_state.get("pf_manual_other_ssi", 0.0) or 0.0)
+
+    manual_deductions_total = manual_taxes + manual_retirement + manual_benefits + manual_other_ssi
+    net_income = total_income - manual_deductions_total
+
     est_tax = 0.0
-    manual_deductions_total = 0.0
-    net_income = total_income
 
-    net_income = total_income
-
-    if income_is == "Gross (before tax)":
-        if gross_mode == "Estimate (tax rate)":
-            if tax_rate > 0:
-                est_tax = total_income * (tax_rate / 100.0)
-            net_income = total_income - est_tax
-        else:
-            manual_taxes = float(st.session_state.get("pf_manual_taxes", 0.0) or 0.0)
-            manual_retirement = float(st.session_state.get("pf_manual_retirement", 0.0) or 0.0)
-            manual_benefits = float(st.session_state.get("pf_manual_benefits", 0.0) or 0.0)
-            manual_other_ssi = float(st.session_state.get("pf_manual_other_ssi", 0.0) or 0.0)
-
-            manual_deductions_total = manual_taxes + manual_retirement + manual_benefits + manual_other_ssi
-            net_income = total_income - manual_deductions_total
+    employer_match = float(st.session_state.get("pf_manual_match", 0.0) or 0.0)
 
     fixed_total = _sum_df(fixed_df, "Monthly Amount")
     variable_total = _sum_df(variable_df, "Monthly Amount")
@@ -550,8 +439,10 @@ def render_personal_finance_dashboard():
     investing_cashflow = investing_total
     investing_display = investing_total
 
-    payroll_retirement = 0.0
-    employer_match = 0.0
+    payroll_retirement = manual_retirement 
+
+    investing_display = investing_total + payroll_retirement + employer_match
+    investing_cashflow = investing_total
 
     if income_is == "Gross (before tax)" and gross_mode == "Manual deductions":
         payroll_retirement = float(st.session_state.get("pf_manual_retirement", 0.0) or 0.0)
