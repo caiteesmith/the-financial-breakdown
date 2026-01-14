@@ -564,7 +564,7 @@ def render_personal_finance_dashboard():
         st.write("")
 
         with st.container(border=True):
-            _section("Expenses")
+            _section("Expenses, Debt, Investments, & Savings")
             c1, c2 = st.columns(2, gap="medium")
             c1.metric("Living Expenses", _money(expenses_total))
             c2.metric("Debt Payments", _money(total_monthly_debt_payments))
