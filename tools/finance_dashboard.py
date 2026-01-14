@@ -215,11 +215,6 @@ def render_personal_finance_dashboard():
     # ---- Optional Gross Breakdown ----
     if income_is == "Gross (before tax)":
         st.subheader("Optional: Gross Income Breakdown")
-        st.caption(
-            "If you know your monthly deductions, enter them here instead of using an estimated tax rate. "
-            "Company match is tracked as extra retirement contribution (it does not reduce take-home)."
-        )
-
         st.radio(
             "How should we calculate net income?",
             ["Estimate (tax rate)", "Manual deductions"],
@@ -227,31 +222,35 @@ def render_personal_finance_dashboard():
             horizontal=True,
         )
 
-        if st.session_state["pf_gross_mode"] == "Manual deductions":
-            with st.form("pf_gross_breakdown_form", border=False):
-                g1, g2, g3 = st.columns(3, gap="large")
+        with st.form("pf_gross_breakdown_form", border=False):
+            manual_mode = st.session_state.get("pf_gross_mode") == "Manual deductions"
 
-                with g1:
-                    st.number_input("Taxes (monthly)", min_value=0.0, step=50.0, key="pf_manual_taxes")
-                    st.number_input("Benefits (monthly)", min_value=0.0, step=25.0, key="pf_manual_benefits")
+            g1, g2, g3 = st.columns(3, gap="large")
+            with g1:
+                st.number_input("Taxes (monthly)", min_value=0.0, step=50.0, key="pf_manual_taxes", disabled=not manual_mode)
+                st.number_input("Benefits (monthly)", min_value=0.0, step=25.0, key="pf_manual_benefits", disabled=not manual_mode)
 
-                with g2:
-                    st.number_input("Retirement (employee, monthly)", min_value=0.0, step=50.0, key="pf_manual_retirement")
-                    st.number_input("Other/SSI (monthly)", min_value=0.0, step=25.0, key="pf_manual_other_ssi")
+            with g2:
+                st.number_input("Retirement (employee, monthly)", min_value=0.0, step=50.0, key="pf_manual_retirement", disabled=not manual_mode)
+                st.number_input("Other/SSI (monthly)", min_value=0.0, step=25.0, key="pf_manual_other_ssi", disabled=not manual_mode)
 
-                with g3:
-                    st.number_input(
-                        "Company Match (monthly, optional)",
-                        min_value=0.0,
-                        step=50.0,
-                        key="pf_manual_match",
-                        help="Tracked as extra retirement contribution; does not reduce take-home.",
-                    )
+            with g3:
+                st.number_input(
+                    "Company Match (monthly, optional)",
+                    min_value=0.0,
+                    step=50.0,
+                    key="pf_manual_match",
+                    help="Tracked as extra retirement contribution; does not reduce take-home.",
+                    disabled=not manual_mode,
+                )
 
-                if st.form_submit_button("Save gross breakdown", width="stretch"):
-                    st.success("Saved.")
-                    st.rerun()
-        else:
+            submitted = st.form_submit_button("Save gross breakdown", use_container_width=True, disabled=not manual_mode)
+
+            if submitted:
+                st.success("Saved.")
+                st.rerun()
+
+        if st.session_state.get("pf_gross_mode") != "Manual deductions":
             st.info("Using estimated tax rate. Switch to Manual deductions if you want to specify exact amounts.")
 
     # -------------------------
@@ -630,11 +629,19 @@ def render_personal_finance_dashboard():
 
     st.metric("Total Monthly Debt Payments", _money(total_monthly_debt_payments))
 
-    st.subheader("Debt Summary")
+    st.markdown("### Debt Summary")
+    st.caption(
+        "These visuals help you answer two questions: "
+        "**(1)** how heavy your monthly debt payments feel vs your take-home income, and "
+        "**(2)** what order to focus debts in if you’re paying extra."
+    )
 
     c1, c2 = st.columns([0.9, 1.1], gap="large")
-
     with c1:
+        st.caption(
+            "**Debt Burden** shows what % of your take-home pay goes to minimum debt payments each month. "
+            "Lower is more flexible. As a rough guide: under ~15% feels light, 15–30% is moderate, 30%+ is heavy."
+        )
         fig_burden, burden_pct = debt_burden_indicator(
             net_income=net_income,
             debt_payments=total_monthly_debt_payments,
@@ -642,18 +649,22 @@ def render_personal_finance_dashboard():
         st.plotly_chart(fig_burden, use_container_width=True)
 
     with c2:
+        st.caption(
+            "**Payoff Order** ranks your debts for where to focus extra payments. "
+            "Bars show **balance**, and the label on each bar is the **APR**."
+        )
         strategy = st.radio(
             "Payoff strategy",
             ["Avalanche (APR)", "Snowball (Balance)"],
             horizontal=True,
             key="pf_debt_strategy",
+            help="Avalanche saves more interest (highest APR first). Snowball builds momentum (smallest balance first).",
         )
         fig_order = debt_payoff_order_chart(st.session_state["pf_debt_df"], strategy=strategy)
         st.plotly_chart(fig_order, use_container_width=True)
 
-    # Optional helper text (short + useful)
     st.caption(
-        "Avalanche saves the most interest (highest APR first). Snowball builds momentum (smallest balance first)."
+        "Tip: keep paying minimums on everything, then put any extra toward the #1 ranked debt."
     )
 
     st.divider()
