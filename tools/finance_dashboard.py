@@ -110,7 +110,6 @@ DEFAULT_VARIABLE = [
 
 DEFAULT_SAVING = [
     {"Bucket": "Emergency fund", "Monthly Amount": 0.0, "Notes": ""},
-    {"Bucket": "HSA", "Monthly Amount": 0.0, "Notes": ""},
     {"Bucket": "Travel", "Monthly Amount": 0.0, "Notes": ""},
     {"Bucket": "Cash savings", "Monthly Amount": 0.0, "Notes": ""},
 ]
@@ -472,43 +471,41 @@ def render_personal_finance_dashboard():
     # ---- Summary UI ----
     with right:
         with st.container(border=True):
-            st.markdown('<div id="pf-summary-card"></div>', unsafe_allow_html=True)
-            st.markdown("### Your Monthly Summary")
+            st.markdown("### Summary")
 
-            safe_weekly = remaining / 4.33
-            safe_daily = remaining / 30.4
+            # Income
+            st.markdown("#### Income")
+            i1, i2 = st.columns(2)
+            i1.metric("Net Income", _money(net_income))
+            i2.metric("Total Income", _money(total_income))
 
-            h1, h2 = st.columns(2, gap="medium")
-            h1.metric("Net Income", _money(net_income))
-            h2.metric("Planned Spending", _money(total_outflow))
+            # Outflows
+            st.markdown("#### Expenses")
+            o1, o2 = st.columns(2)
+            o1.metric("Living Expenses", _money(expenses_total))
+            o2.metric("Debt Payments", _money(total_monthly_debt_payments))
 
-            st.markdown("#### Cash Buffer")
-            r1, r2 = st.columns(2, gap="medium")
-            r1.metric("Left Over", _money(remaining))
-            r2.metric("Debt Payments", _money(total_monthly_debt_payments))
+            o3, o4 = st.columns(2)
+            o3.metric("Saving", _money(saving_total))
+            o4.metric("Investing", _money(investing_display))
 
-            st.markdown("#### Safe to Spend")
-            s1, s2 = st.columns(2, gap="medium")
-            s1.metric("Weekly", _money(safe_weekly))
-            s2.metric("Daily", _money(safe_daily))
+            o5, _ = st.columns(2)
+            o5.metric("Total Expenses", _money(total_outflow))
 
-            st.markdown("#### Saving & Investing")
-            si1, si2 = st.columns(2, gap="medium")
-            si1.metric("Saving", _money(saving_total))
-            si2.metric("Investing", _money(investing_display))
+            # Remaining
+            st.markdown("#### Leftover")
+            r1, r2 = st.columns(2)
+            r1.metric("Monthly", _money(remaining))
+            r2.metric("Weekly", _money(remaining / 4.33))
 
+            r3, _ = st.columns(2)
+            r3.metric("Daily", _money(remaining / 30.4))
+
+            # Net Worth
             st.markdown("#### Net Worth")
-            nw1, nw2 = st.columns(2, gap="medium")
-            nw1.metric("Net Worth", _money(net_worth))
-            nw2.metric("Total Liabilities", _money(total_liabilities))
-
-            # Status message
-            if remaining < 0:
-                st.error("You're budgeting more than you're bringing in this month.")
-            elif remaining < 200:
-                st.warning("This month is very tight — you don't have much buffer.")
-            else:
-                st.success("You've got some breathing room this month.")
+            n1, n2 = st.columns(2)
+            n1.metric("Net Worth", _money(net_worth))
+            n2.metric("Total Liabilities", _money(total_liabilities))
 
     st.divider()
     st.subheader("🆘 Your Emergency Minimum")
