@@ -337,23 +337,29 @@ def render_mortgage_payoff_calculator():
                 step=50.0,
                 key="mtg_extra_monthly",
             )
+            extra_one_time = st.number_input(
+                "One-time extra payment",
+                min_value=0.0,
+                step=100.0,
+                key="mtg_extra_one_time",
+            )
 
-            c1, c2 = st.columns([1, 1], gap="medium")
-            with c1:
-                extra_one_time = st.number_input(
-                    "One-time extra payment",
-                    min_value=0.0,
-                    step=100.0,
-                    key="mtg_extra_one_time",
-                )
-            with c2:
-                extra_one_time_month = st.number_input(
-                    "Apply one-time extra in month",
-                    min_value=0,
-                    step=1,
-                    key="mtg_extra_one_time_month",
-                    help="0 means the first payment month, 1 means the second payment month, etc.",
-                )
+            # c1, c2 = st.columns([1, 1], gap="medium")
+            # with c1:
+            #     extra_one_time = st.number_input(
+            #         "One-time extra payment",
+            #         min_value=0.0,
+            #         step=100.0,
+            #         key="mtg_extra_one_time",
+            #     )
+            # with c2:
+            #     extra_one_time_month = st.number_input(
+            #         "Apply one-time extra in month",
+            #         min_value=0,
+            #         step=1,
+            #         key="mtg_extra_one_time_month",
+            #         help="0 means the first payment month, 1 means the second payment month, etc.",
+            #     )
 
     # Run calculation
     with right:
@@ -367,7 +373,7 @@ def render_mortgage_payoff_calculator():
                 start_date=start_date,
                 extra_monthly=float(extra_monthly),
                 extra_one_time=float(extra_one_time),
-                extra_one_time_month_index=int(extra_one_time_month),
+                # extra_one_time_month_index=int(extra_one_time_month),
                 max_months=2000,
             )
 
@@ -448,9 +454,11 @@ def render_mortgage_payoff_calculator():
                 f"PMI drops off in **{pmi_drop_date.strftime('%B %Y')}**, "
                 f"reducing your monthly housing by **{_money(pmi_v)}**."
             )
-            st.caption(f"Monthly housing after PMI: **{_money(total_housing_after)}**")
         elif pmi_v > 0 and float(home_value or 0.0) <= 0:
             st.info("Enter a home value above to estimate when PMI drops off (80% LTV).")
+
+        if payoff_date:
+            st.success(f"Estimated payoff date: **{payoff_date.strftime('%B %Y')}**")
 
         with st.expander("Monthly housing cost breakdown", expanded=False):
             st.write(f"• **Principal & Interest**: {_money(monthly_payment)}")
@@ -467,9 +475,6 @@ def render_mortgage_payoff_calculator():
 
             if hoa_v:
                 st.write(f"• **HOA**: {_money(hoa_v)}")
-
-        if payoff_date:
-            st.success(f"Estimated payoff date: **{payoff_date.strftime('%B %Y')}**")
 
         st.plotly_chart(_balance_chart(result.schedule), width="stretch")
 
