@@ -123,6 +123,8 @@ DEFAULT_VARIABLE = [
     {"Expense": "Gas/Transit", "Monthly Amount": 0.0, "Notes": ""},
     {"Expense": "Dining out", "Monthly Amount": 0.0, "Notes": ""},
     {"Expense": "Subscriptions", "Monthly Amount": 0.0, "Notes": ""},
+    {"Expense": "Prescription", "Monthly Amount": 0.0, "Notes": ""},
+    {"Expense": "Childcare", "Monthly Amount": 0.0, "Notes": ""},
     {"Expense": "Gym/Fitness", "Monthly Amount": 0.0, "Notes": ""},
     {"Expense": "TP Fund", "Monthly Amount": 0.0, "Notes": ""},
     {"Expense": "Pet Expenses", "Monthly Amount": 0.0, "Notes": ""},
@@ -131,14 +133,19 @@ DEFAULT_VARIABLE = [
 
 DEFAULT_SAVING = [
     {"Bucket": "Emergency fund", "Monthly Amount": 0.0, "Notes": ""},
+    {"Bucket": "Entertainment", "Monthly Amount": 0.0, "Notes": ""},
     {"Bucket": "Travel", "Monthly Amount": 0.0, "Notes": ""},
-    {"Bucket": "Fun Money", "Monthly Amount": 0.0, "Notes": ""},
+    {"Bucket": "Gifts", "Monthly Amount": 0.0, "Notes": ""},
     {"Bucket": "Cash savings", "Monthly Amount": 0.0, "Notes": ""},
 ]
 
 DEFAULT_INVESTING = [
     {"Bucket": "Brokerage", "Monthly Amount": 0.0, "Notes": ""},
-    {"Bucket": "Retirement", "Monthly Amount": 0.0, "Notes": ""},
+    {"Bucket": "401k", "Monthly Amount": 0.0, "Notes": ""},
+    {"Bucket": "403b", "Monthly Amount": 0.0, "Notes": ""},
+    {"Bucket": "Traditional IRA", "Monthly Amount": 0.0, "Notes": ""},
+    {"Bucket": "Roth IRA", "Monthly Amount": 0.0, "Notes": ""},
+    {"Bucket": "529", "Monthly Amount": 0.0, "Notes": ""},
     {"Bucket": "HSA", "Monthly Amount": 0.0, "Notes": ""},
 ]
 
@@ -148,11 +155,13 @@ DEFAULT_DEBT = [
     {"Debt": "Student loan", "Balance": 0.0, "APR %": 0.0, "Monthly Payment": 0.0, "Notes": ""},
     {"Debt": "Personal loan", "Balance": 0.0, "APR %": 0.0, "Monthly Payment": 0.0, "Notes": ""},
     {"Debt": "Medical debt", "Balance": 0.0, "APR %": 0.0, "Monthly Payment": 0.0, "Notes": ""},
+    {"Debt": "HELOC", "Balance": 0.0, "APR %": 0.0, "Monthly Payment": 0.0, "Notes": ""},
 ]
 
 DEFAULT_ASSETS = [
     {"Asset": "Checking", "Value": 0.0, "Notes": ""},
     {"Asset": "Savings", "Value": 0.0, "Notes": ""},
+    {"Asset": "HYSA", "Value": 0.0, "Notes": ""},
     {"Asset": "Brokerage", "Value": 0.0, "Notes": ""},
     {"Asset": "Retirement", "Value": 0.0, "Notes": ""},
     {"Asset": "Value of Home (minus debt)", "Value": 0.0, "Notes": ""},
