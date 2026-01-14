@@ -16,6 +16,10 @@ def cashflow_breakdown_chart(
     saving: float,
     investing_cashflow: float,
 ):
+    """
+    Single stacked bar showing where monthly income goes.
+    - If spending exceeds income, shows 'Over budget' instead of negative remainder.
+    """
     net_income = float(net_income or 0.0)
     living_expenses = max(float(living_expenses or 0.0), 0.0)
     debt_payments = max(float(debt_payments or 0.0), 0.0)
@@ -35,10 +39,10 @@ def cashflow_breakdown_chart(
         labels.append("Over budget")
         values.append(over_budget_value)
 
+    # Ensure we never end up with Plotly's weird -1..1 default range
     max_x = max(net_income, total_outflow, 1.0)
 
     fig = go.Figure()
-
     for label, val in zip(labels, values):
         fig.add_trace(
             go.Bar(
@@ -53,17 +57,21 @@ def cashflow_breakdown_chart(
     fig.update_layout(
         barmode="stack",
         height=96,
-        margin=dict(l=0, r=0, t=6, b=22),
+        # more bottom room so the labels don't feel glued to the bar
+        margin=dict(l=0, r=0, t=8, b=34),
+
         showlegend=True,
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=1.10,
+            y=1.12,
             xanchor="left",
             x=0,
             font=dict(size=13),
-            itemwidth=80,
+            itemclick=False,
+            itemdoubleclick=False,
         ),
+
         xaxis=dict(
             range=[0, max_x],
             tickprefix="$",
@@ -71,11 +79,23 @@ def cashflow_breakdown_chart(
             showgrid=False,
             zeroline=False,
             fixedrange=True,
+
+            # keep full-width; avoid Plotly adding side padding
             automargin=False,
-            ticklabelposition="inside",
-            tickpadding=12,
             domain=[0, 1],
+
+            # labels inside the plot area (so they don't create outside padding)
+            ticklabelposition="inside",
+
+            # spacing between the axis line and tick labels
+            # (positive pushes labels deeper into the plot area when "inside")
+            ticklabelstandoff=14,
+
+            # small tick marks (optional; makes axis feel intentional)
+            ticks="outside",
+            ticklen=4,
         ),
+
         yaxis=dict(
             range=[-0.5, 0.5],
             showticklabels=False,
@@ -86,6 +106,7 @@ def cashflow_breakdown_chart(
         ),
     )
 
+    # remove bar outlines
     fig.update_traces(marker=dict(line=dict(width=0)))
 
     return fig, total_outflow, remaining
