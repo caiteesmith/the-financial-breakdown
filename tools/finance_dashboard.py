@@ -320,6 +320,7 @@ def render_personal_finance_dashboard():
                     )
                     st.rerun()
 
+        with tab_exp:
             st.markdown("**Fixed Expenses**")
             with st.form("pf_fixed_form", border=False):
                 fixed_edit = st.data_editor(
