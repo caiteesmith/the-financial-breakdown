@@ -55,7 +55,7 @@ def _monthly_payment(principal: float, apr_pct: float, term_years: int) -> float
     if p <= 0:
         return 0.0
 
-    r = float(apr_pct) / 100.0 / 12.0
+    r = float(apr_pct) / 1000.0 / 12.0
     n = int(term_years * 12)
 
     if n <= 0:
@@ -342,7 +342,7 @@ def render_mortgage_payoff_calculator():
                 )
             with c2:
                 extra_one_time_month = st.number_input(
-                    "Apply one-time extra in month # (0 = first month)",
+                    "Apply one-time extra in month",
                     min_value=0,
                     step=1,
                     key="mtg_extra_one_time_month",
@@ -427,7 +427,7 @@ def render_mortgage_payoff_calculator():
         r2c2.metric("Total Interest Paid", _money(result.total_interest))
 
         s1, s2 = st.columns(2, gap="large")
-        s1.metric("Interest Saved (vs no extra)", _money(interest_saved))
+        s1.metric("Interest Saved", _money(interest_saved))
         s2.metric("Months Saved", f"{months_saved:,}")
 
         if baseline_payoff_date and payoff_date:
