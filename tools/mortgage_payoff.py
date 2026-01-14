@@ -230,10 +230,10 @@ def render_mortgage_payoff_calculator():
 
     with left:
         with st.container(border=True):
-            st.subheader("Inputs")
+            st.subheader("Your Mortgage")
 
             start_date = st.date_input("Start date (first payment month)", key="mtg_start_date")
-            principal = st.number_input("Loan balance / principal", min_value=0.0, step=1000.0, key="mtg_principal")
+            principal = st.number_input("Loan balance/principal", min_value=0.0, step=1000.0, key="mtg_principal")
             apr = st.number_input("Interest rate (APR %)", min_value=0.0, max_value=30.0, step=0.125, key="mtg_apr")
 
             st.radio(
@@ -307,11 +307,15 @@ def render_mortgage_payoff_calculator():
         months = result.months
 
         # Summary metrics
-        m1, m2, m3, m4 = st.columns(4, gap="large")
-        m1.metric("Monthly P&I", _money(monthly_payment))
-        m2.metric("Payoff (months)", f"{months:,}")
-        m3.metric("Total Interest", _money(result.total_interest))
-        m4.metric("Total Paid", _money(result.total_paid))
+        # 2x2 grid so values don't truncate on narrower screens
+        r1c1, r1c2 = st.columns(2, gap="large")
+        r2c1, r2c2 = st.columns(2, gap="large")
+
+        r1c1.metric("Monthly P&I", _money(monthly_payment))
+        r1c2.metric("Payoff (months)", f"{months:,}")
+
+        r2c1.metric("Total Interest", _money(result.total_interest))
+        r2c2.metric("Total Paid", _money(result.total_paid))
 
         if payoff_date:
             st.success(f"Estimated payoff date: **{payoff_date.strftime('%B %Y')}**")
