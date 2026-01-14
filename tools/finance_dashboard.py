@@ -270,6 +270,9 @@ def render_personal_finance_dashboard():
     # 🔥 must run before ANY widgets are created
     _apply_pending_snapshot_if_any()
 
+    st.session_state.setdefault("pf_uploader_nonce", 0)
+    st.session_state.setdefault("pf_last_import_sig", "")
+
     st.title("💸 Personal Finance Dashboard")
     st.caption(
         "A spreadsheet-style dashboard to track your personal monthly cash flow and net worth. "
@@ -703,7 +706,7 @@ def render_personal_finance_dashboard():
 
             if remaining < 0:
                 st.error(
-                    f"You're over-allocated by **{_money(abs(remaining))}** this month. No shame — it just means something needs to give (even temporarily)."
+                    f"You're over-allocated by **{_money(abs(remaining))}** this month. No shame, it just means something needs to give (even temporarily)."
                 )
                 st.markdown(
                     "- Try trimming **wants** first (subscriptions, dining out, random spending)\n"
@@ -712,18 +715,18 @@ def render_personal_finance_dashboard():
                 )
             elif buffer < 200:
                 st.warning(
-                    f"You've got **{_money(buffer)}** left unallocated. That's a tight buffer — doable, but it can feel stressful if anything pops up."
+                    f"You've got **{_money(buffer)}** left unallocated. That's a tight buffer, doable, but it can feel stressful if anything pops up."
                 )
                 st.markdown(
                     'If it feels tight, aim for a buffer closer to **$200-$500**. Treat this like “life happens” money, not failure money.'
                 )
             elif buffer < 750:
-                st.success(f"You've got **{_money(buffer)}** left unallocated. That's a solid buffer — you’ve got breathing room.")
+                st.success(f"You've got **{_money(buffer)}** left unallocated. That's a solid buffer, you've got breathing room.")
                 st.markdown(
                     "This is a great range for stability and flexibility. If you want, you can decide later whether to save it, invest it, or use it intentionally."
                 )
             else:
-                st.success(f"You've got **{_money(buffer)}** left unallocated. You're doing really good — this is strong flexibility.")
+                st.success(f"You've got **{_money(buffer)}** left unallocated. You're doing really good, this is strong flexibility.")
                 st.markdown(
                     "- You could:\n"
                     "  - build your emergency fund faster\n"
@@ -854,7 +857,7 @@ def render_personal_finance_dashboard():
     with c2:
         st.caption(
             "**Debt Burden** shows what % of your take-home pay goes to minimum debt payments each month. "
-            "Lower is more flexible. Rough guide: under ~15% feels light, 15–30% is moderate, 30%+ is heavy."
+            "Lower is more flexible. Rough guide: under ~15% feels light, 15-30% is moderate, 30%+ is heavy."
         )
         fig_burden, _ = debt_burden_indicator(net_income=net_income, debt_payments=total_monthly_debt_payments)
         st.plotly_chart(fig_burden, width="stretch")
@@ -972,18 +975,37 @@ def render_personal_finance_dashboard():
 
     with st.expander("Import a saved snapshot", expanded=False):
         st.caption("Upload a previously downloaded snapshot JSON to restore your dashboard inputs.")
-        uploaded = st.file_uploader("Snapshot JSON", type=["json"], key="pf_snapshot_uploader")
+
+        uploader_key = f"pf_snapshot_uploader_{st.session_state['pf_uploader_nonce']}"
+        uploaded = st.file_uploader("Snapshot JSON", type=["json"], key=uploader_key)
 
         if uploaded is not None:
             try:
-                snap = json.load(uploaded)
+                raw = uploaded.getvalue()
+                sig = hashlib.sha256(raw).hexdigest()
+
+                snap = json.loads(raw.decode("utf-8"))
+
                 if not isinstance(snap, dict) or "tables" not in snap:
                     st.error("That file doesn't look like a valid dashboard snapshot.")
                 else:
-                    st.session_state["pf_pending_snapshot"] = snap
-                    st.session_state["pf_has_pending_import"] = True
-                    st.success("Snapshot queued — applying now…")
-                    st.rerun()
+                    # prevent re-queueing on every rerun
+                    already_applied = (sig == st.session_state.get("pf_last_import_sig", ""))
+
+                    if already_applied:
+                        st.info("Snapshot already applied.")
+                    else:
+                        st.success("Snapshot ready to import.")
+                        if st.button("Apply snapshot now", type="primary", width="stretch"):
+                            st.session_state["pf_pending_snapshot"] = snap
+                            st.session_state["pf_has_pending_import"] = True
+
+                            # mark as applied + reset uploader so it doesn't keep firing
+                            st.session_state["pf_last_import_sig"] = sig
+                            st.session_state["pf_uploader_nonce"] += 1
+
+                            st.rerun()
+
             except Exception as e:
                 st.error(f"Couldn't read that file: {e}")
 
