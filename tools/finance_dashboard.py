@@ -479,32 +479,32 @@ def render_personal_finance_dashboard():
             with r1_l:
                 st.metric("Net Income (monthly)", _money(net_income))
             with r1_r:
-                st.metric("Left Over (monthly)", _money(remaining))
+                st.metric("Total Expenses (monthly)", _money(total_outflow))
 
             r2_l, r2_r = st.columns(2, gap="medium")
             with r2_l:
-                st.metric("Total Expenses (monthly)", _money(total_outflow))
+                st.metric("Left Over (monthly)", _money(remaining))
             with r2_r:
-                st.metric("Total Liabilities", _money(total_liabilities))
-
-            r3_l, r3_r = st.columns(2, gap="medium")
-            with r3_l:
-                st.metric("Saving (monthly)", _money(saving_total))
-            with r3_r:
-                st.metric("Investing (monthly)", _money(investing_display))
+                st.metric("Debt Payments (monthly)", _money(total_monthly_debt_payments))
 
             safe_weekly = remaining / 4.33
             safe_daily = remaining / 30.4
 
+            r3_l, r3_r = st.columns(2, gap="medium")
+            with r3_l:
+                st.metric("Safe-to-spend (weekly)", _money(safe_weekly))
+            with r3_r:
+                st.metric("Safe-to-spend (daily)", _money(safe_daily))
+
             r4_l, r4_r = st.columns(2, gap="medium")
             with r4_l:
-                st.metric("Safe-to-spend (weekly)", _money(safe_weekly))
+                st.metric("Saving (monthly)", _money(saving_total))
             with r4_r:
-                st.metric("Safe-to-spend (daily)", _money(safe_daily))
+                st.metric("Investing (monthly)", _money(investing_display))
 
             r5_l, r5_r = st.columns(2, gap="medium")
             with r5_l:
-                st.metric("Debt Payments (monthly)", _money(total_monthly_debt_payments))
+                st.metric("Total Liabilities", _money(total_liabilities))
             with r5_r:
                 st.metric("Net Worth", _money(net_worth))
 
@@ -587,7 +587,7 @@ def render_personal_finance_dashboard():
 
     # ---- Debt info ----
     st.subheader("Debt Details")
-    st.caption("This doesn't affect net worth beyond the liability values — it's here for clarity and planning.")
+    st.caption("This doesn't affect net worth beyond the liability values, it's just here for clarity and planning.")
 
     with st.form("pf_debt_form", border=False):
         debt_edit = st.data_editor(
