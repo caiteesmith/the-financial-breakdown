@@ -475,45 +475,42 @@ def render_personal_finance_dashboard():
             st.markdown('<div id="pf-summary-card"></div>', unsafe_allow_html=True)
             st.markdown("### Your Summary")
 
-            r1_l, r1_r = st.columns(2, gap="medium")
-            with r1_l:
-                st.metric("Net Income (monthly)", _money(net_income))
-            with r1_r:
-                st.metric("Total Expenses (monthly)", _money(total_outflow))
-
-            st.divider()
-
-            # r2_l, r2_r = st.columns(2, gap="medium")
-            # with r2_l:
-            #     st.metric("Left Over (monthly)", _money(remaining))
-            # with r2_r:
-            #     st.metric("Debt Payments (monthly)", _money(total_monthly_debt_payments))
-
             safe_weekly = remaining / 4.33
             safe_daily = remaining / 30.4
 
-            r3_l, r3_m, r3_r = st.columns(3, gap="medium")
-            with r3_l:
+            # Row 1 (Hero)
+            h1, h2 = st.columns(2, gap="medium")
+            with h1:
+                st.metric("Net Income (monthly)", _money(net_income))
+            with h2:
+                st.metric("Total Outflow (monthly)", _money(total_outflow))
+
+            # Row 2 (Cash buffer)
+            b1, b2, b3 = st.columns(3, gap="medium")
+            with b1:
                 st.metric("Left Over (monthly)", _money(remaining))
-            with r3_m:
+            with b2:
                 st.metric("Safe-to-spend (weekly)", _money(safe_weekly))
-            with r3_r:
+            with b3:
                 st.metric("Safe-to-spend (daily)", _money(safe_daily))
 
-            r4_l, r4_r = st.columns(2, gap="medium")
-            with r4_l:
-                st.metric("Saving (monthly)", _money(saving_total))
-            with r4_r:
-                st.metric("Investing (monthly)", _money(investing_display))
+            st.markdown("---")
 
-            st.divider()
+            # Row 3 (Breakdowns)
+            d1, d2 = st.columns(2, gap="medium")
+            with d1:
+                st.metric("Saving / Investing (monthly)", _money(saving_total + investing_display))
+            with d2:
+                st.metric("Debt Payments (monthly)", _money(total_monthly_debt_payments))
 
-            r5_l, r5_r = st.columns(2, gap="medium")
-            with r5_l:
-                st.metric("Total Liabilities", _money(total_liabilities))
-            with r5_r:
+            # Row 4 (Net worth)
+            nw1, nw2 = st.columns(2, gap="medium")
+            with nw1:
                 st.metric("Net Worth", _money(net_worth))
+            with nw2:
+                st.metric("Total Liabilities", _money(total_liabilities))
 
+            # Status message (no extra dividers)
             if remaining < 0:
                 st.error("You're budgeting more than you're bringing in this month.")
             elif remaining < 200:
