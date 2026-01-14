@@ -58,10 +58,42 @@ def _ensure_df(key: str, default_rows: List[Dict]) -> pd.DataFrame:
     return st.session_state[key]
 
 
+def _sanitize_editor_df(df: pd.DataFrame, expected_cols: List[str], numeric_cols: List[str]) -> pd.DataFrame:
+    """
+    Streamlit data_editor can sometimes introduce helper columns (id/index) when adding rows.
+    This normalizes the DF to the exact schema we expect.
+    """
+    if df is None or not isinstance(df, pd.DataFrame):
+        df = pd.DataFrame(columns=expected_cols)
+
+    # Drop obvious Streamlit/helper columns if they appear
+    drop_candidates = {"id", "_id", "__id", "row_id", "_row_id", "index", "__index__"}
+    extra = [c for c in df.columns if str(c).strip().lower() in drop_candidates]
+    if extra:
+        df = df.drop(columns=extra, errors="ignore")
+
+    # Ensure all expected columns exist
+    for c in expected_cols:
+        if c not in df.columns:
+            df[c] = "" if c not in numeric_cols else 0.0
+
+    # Keep ONLY expected columns + enforce order
+    df = df[expected_cols].copy()
+
+    # Coerce numeric columns (blank -> 0)
+    for c in numeric_cols:
+        df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0.0)
+
+    # Reset index so Streamlit doesn't invent identity columns
+    df = df.reset_index(drop=True)
+
+    return df
+
+
 # -------------------------
 # Defaults
 # -------------------------
-DEFAULT_INCOME = [{"Source": "Paycheck (Net)", "Monthly Amount": 0.0, "Notes": ""}]
+DEFAULT_INCOME = [{"Source": "Paycheck", "Monthly Amount": 0.0, "Notes": ""}]
 
 DEFAULT_FIXED = [
     {"Expense": "Mortgage/Rent", "Monthly Amount": 0.0, "Notes": ""},
@@ -131,7 +163,7 @@ def render_personal_finance_dashboard():
     st.session_state.setdefault("pf_gross_mode", "Estimate (tax rate)")
     st.session_state.setdefault("pf_manual_taxes", 0.0)
     st.session_state.setdefault("pf_manual_retirement", 0.0)
-    st.session_state.setdefault("pf_manual_match", 0.0)  # tracked, not deducted
+    st.session_state.setdefault("pf_manual_match", 0.0)
     st.session_state.setdefault("pf_manual_benefits", 0.0)
     st.session_state.setdefault("pf_manual_other_ssi", 0.0)
 
@@ -211,7 +243,7 @@ def render_personal_finance_dashboard():
     left, right = st.columns([1.1, 0.9], gap="large")
 
     # -------------------------
-    # EDITORS (Forms = no reruns while typing)
+    # EDITORS
     # -------------------------
     with left:
         tab_income, tab_exp, tab_save = st.tabs(["Income", "Expenses", "Saving/Investing"])
@@ -224,6 +256,7 @@ def render_personal_finance_dashboard():
                     st.session_state["pf_income_df"],
                     num_rows="dynamic",
                     use_container_width=True,
+                    hide_index=True,
                     key="pf_income_editor",
                     column_config={
                         "Monthly Amount": st.column_config.NumberColumn(min_value=0.0, step=50.0, format="%.2f"),
@@ -231,7 +264,11 @@ def render_personal_finance_dashboard():
                 )
                 saved = st.form_submit_button("Save income", use_container_width=True)
                 if saved:
-                    st.session_state["pf_income_df"] = income_edit
+                    st.session_state["pf_income_df"] = _sanitize_editor_df(
+                        income_edit,
+                        expected_cols=["Source", "Monthly Amount", "Notes"],
+                        numeric_cols=["Monthly Amount"],
+                    )
 
         with tab_exp:
             st.write("Split your expenses into fixed & variable so you can see what's flexible.")
@@ -249,7 +286,11 @@ def render_personal_finance_dashboard():
                 )
                 saved_fixed = st.form_submit_button("Save fixed expenses", use_container_width=True)
                 if saved_fixed:
-                    st.session_state["pf_fixed_df"] = fixed_edit
+                    st.session_state["pf_fixed_df"] = _sanitize_editor_df(
+                        fixed_edit,
+                        expected_cols=["Expense", "Monthly Amount", "Notes"],
+                        numeric_cols=["Monthly Amount"],
+                    )
 
             st.markdown("**Variable Expenses**")
             with st.form("pf_variable_form", border=False):
@@ -264,7 +305,11 @@ def render_personal_finance_dashboard():
                 )
                 saved_variable = st.form_submit_button("Save variable expenses", use_container_width=True)
                 if saved_variable:
-                    st.session_state["pf_variable_df"] = variable_edit
+                    st.session_state["pf_variable_df"] = _sanitize_editor_df(
+                        variable_edit,
+                        expected_cols=["Expense", "Monthly Amount", "Notes"],
+                        numeric_cols=["Monthly Amount"],
+                    )
 
         with tab_save:
             st.write("Monthly contributions you want to make (Retirement, brokerage, emergency fund, etc.).")
@@ -281,7 +326,11 @@ def render_personal_finance_dashboard():
                 )
                 saved_saving = st.form_submit_button("Save saving/investing", use_container_width=True)
                 if saved_saving:
-                    st.session_state["pf_saving_df"] = saving_edit
+                    st.session_state["pf_saving_df"] = _sanitize_editor_df(
+                        saving_edit,
+                        expected_cols=["Bucket", "Monthly Amount", "Notes"],
+                        numeric_cols=["Monthly Amount"],
+                    )
 
     # ---- Calculations ----
     income_df = st.session_state["pf_income_df"]
@@ -476,7 +525,11 @@ def render_personal_finance_dashboard():
             )
             saved_assets = st.form_submit_button("Save assets", use_container_width=True)
             if saved_assets:
-                st.session_state["pf_assets_df"] = assets_edit
+                st.session_state["pf_assets_df"] = _sanitize_editor_df(
+                    assets_edit,
+                    expected_cols=["Asset", "Value", "Notes"],
+                    numeric_cols=["Value"],
+                )
 
     with l_col:
         st.markdown("**Liabilities**")
@@ -492,7 +545,11 @@ def render_personal_finance_dashboard():
             )
             saved_liab = st.form_submit_button("Save liabilities", use_container_width=True)
             if saved_liab:
-                st.session_state["pf_liabilities_df"] = liabilities_edit
+                st.session_state["pf_liabilities_df"] = _sanitize_editor_df(
+                    liabilities_edit,
+                    expected_cols=["Liability", "Value", "Notes"],
+                    numeric_cols=["Value"],
+                )
 
     assets_df = st.session_state["pf_assets_df"]
     liabilities_df = st.session_state["pf_liabilities_df"]
@@ -526,7 +583,11 @@ def render_personal_finance_dashboard():
         )
         saved_debt = st.form_submit_button("Save debt details", use_container_width=True)
         if saved_debt:
-            st.session_state["pf_debt_df"] = debt_edit
+            st.session_state["pf_debt_df"] = _sanitize_editor_df(
+                debt_edit,
+                expected_cols=["Debt", "Balance", "APR %", "Monthly Payment", "Notes"],
+                numeric_cols=["Balance", "APR %", "Monthly Payment"],
+            )
 
     total_debt_payment = _sum_df(st.session_state["pf_debt_df"], "Monthly Payment")
     st.metric("Total Monthly Debt Payments", _money(total_debt_payment))
