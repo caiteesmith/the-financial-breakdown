@@ -538,6 +538,22 @@ def render_personal_finance_dashboard():
     debt_minimums = total_monthly_debt_payments
     emergency_minimum_monthly = fixed_total + essential_variable + debt_minimums
 
+    # -------------------------
+    # 50/30/20-style breakdown
+    # -------------------------
+    needs_amount = emergency_minimum_monthly  # fixed + essential variable + minimum debt
+    wants_amount = max(0.0, expenses_total - needs_amount)  # non-essential variable spending
+    save_invest_amount = saving_total + investing_cashflow  # cashflow-based saving/investing
+
+    def _safe_pct(numerator: float, denominator: float) -> float | None:
+        if denominator <= 0:
+            return None
+        return (numerator / denominator) * 100.0
+
+    needs_pct = _safe_pct(needs_amount, net_income)
+    wants_pct = _safe_pct(wants_amount, net_income)
+    save_invest_pct = _safe_pct(save_invest_amount, net_income)
+
     # ---- Summary UI ----
     def _section(title: str):
         st.markdown(
@@ -647,6 +663,21 @@ def render_personal_finance_dashboard():
                         """
                     )
 
+        with st.container(border=True):
+            _section("Spending & Saving Split (Needs/Wants/Save & Invest)")
+
+            if net_income <= 0:
+                st.info("Add income to see your split.")
+            else:
+                p1, p2, p3 = st.columns(3, gap="medium")
+                p1.metric("Needs", _pct(needs_pct), help=f"{_money(needs_amount)} / {_money(net_income)}")
+                p2.metric("Wants", _pct(wants_pct), help=f"{_money(wants_amount)} / {_money(net_income)}")
+                p3.metric("Save & Invest", _pct(save_invest_pct), help=f"{_money(save_invest_amount)} / {_money(net_income)}")
+
+                st.caption(
+                    "Rule of thumb: ~50% needs, ~30% wants, ~20% save & invest. "
+                    "This is guidance, not a grade."
+                )
 
         with st.container(border=True):
             _section("Net Worth & Liabilities")
