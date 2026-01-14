@@ -101,7 +101,10 @@ def _sanitize_editor_df(df: pd.DataFrame, expected_cols: List[str], numeric_cols
 # -------------------------
 # Defaults
 # -------------------------
-DEFAULT_INCOME = [{"Source": "Paycheck", "Monthly Amount": 0.0, "Notes": ""}]
+DEFAULT_INCOME = [
+    {"Source": "Paycheck 1", "Monthly Amount": 0.0, "Notes": ""},
+    {"Source": "Paycheck 2", "Monthly Amount": 0.0, "Notes": ""},
+]
 
 DEFAULT_FIXED = [
     {"Expense": "Mortgage/Rent", "Monthly Amount": 0.0, "Notes": ""},
@@ -273,8 +276,7 @@ def render_personal_finance_dashboard():
 
         with tab_income:
             st.write(
-                "Add your income sources (monthly amounts). "
-                "If you have a two-income household, include both here."
+                "Add your income sources. If you have a two-income household, include both here."
             )
             with tab_exp:
                 st.write("Split your expenses into fixed & variable so you can see what's flexible.")
