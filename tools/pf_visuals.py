@@ -16,10 +16,6 @@ def cashflow_breakdown_chart(
     saving: float,
     investing_cashflow: float,
 ):
-    """
-    Single stacked bar showing where monthly income goes.
-    - If spending exceeds income, shows 'Over budget' instead of negative remainder.
-    """
     net_income = float(net_income or 0.0)
     living_expenses = max(float(living_expenses or 0.0), 0.0)
     debt_payments = max(float(debt_payments or 0.0), 0.0)
@@ -42,11 +38,11 @@ def cashflow_breakdown_chart(
     max_x = max(net_income, total_outflow, 1.0)
 
     fig = go.Figure()
+
     for label, val in zip(labels, values):
         fig.add_trace(
             go.Bar(
                 name=label,
-                # Use numeric y + tight y-range to avoid the category band padding
                 y=[0],
                 x=[val],
                 orientation="h",
@@ -56,8 +52,8 @@ def cashflow_breakdown_chart(
 
     fig.update_layout(
         barmode="stack",
-        height=90,  # slightly more compact than 110
-        margin=dict(l=0, r=0, t=8, b=0),
+        height=90,
+        margin=dict(l=0, r=0, t=6, b=18),
         showlegend=True,
         legend=dict(
             orientation="h",
@@ -67,21 +63,23 @@ def cashflow_breakdown_chart(
             x=0,
         ),
         xaxis=dict(
-            title="",
             range=[0, max_x],
             tickprefix="$",
             separatethousands=True,
             showgrid=False,
             zeroline=False,
             fixedrange=True,
+            automargin=False,          
+            ticklabelposition="inside",
+            domain=[0, 1],           
         ),
         yaxis=dict(
-            title="",
             range=[-0.5, 0.5],
             showticklabels=False,
             showgrid=False,
             zeroline=False,
             fixedrange=True,
+            domain=[0, 1],
         ),
     )
 
