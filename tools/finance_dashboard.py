@@ -3,9 +3,8 @@
 # =========================================
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import pandas as pd
 import streamlit as st
@@ -38,6 +37,7 @@ def _sum_df(df: pd.DataFrame, col: str) -> float:
 
 
 def _ensure_df(key: str, default_rows: List[Dict]) -> pd.DataFrame:
+    """Initialize a dataframe in session_state once, then always return the stored value."""
     if key not in st.session_state or not isinstance(st.session_state[key], pd.DataFrame):
         st.session_state[key] = pd.DataFrame(default_rows)
     return st.session_state[key]
@@ -51,11 +51,14 @@ def _download_json_button(label: str, payload: Dict, filename: str):
 def _download_csv_button(label: str, df: pd.DataFrame, filename: str):
     st.download_button(label, data=df.to_csv(index=False), file_name=filename, mime="text/csv", use_container_width=True)
 
+
 def _weekly_from_monthly(monthly: float) -> float:
     return monthly / 4.33
 
+
 def _norm(s: object) -> str:
     return re.sub(r"\s+", " ", str(s or "").strip().lower())
+
 
 def _sum_by_keywords(df: pd.DataFrame, name_col: str, amount_col: str, keywords: List[str]) -> float:
     if df is None or df.empty or name_col not in df.columns or amount_col not in df.columns:
@@ -72,12 +75,12 @@ def _sum_by_keywords(df: pd.DataFrame, name_col: str, amount_col: str, keywords:
             total += float(amt)
     return float(total)
 
+
 # -------------------------
 # Defaults
 # -------------------------
-DEFAULT_INCOME = [
-    {"Source": "Paycheck (Net)", "Monthly Amount": 0.0, "Notes": ""}
-]
+DEFAULT_INCOME = [{"Source": "Paycheck (Net)", "Monthly Amount": 0.0, "Notes": ""}]
+
 DEFAULT_FIXED = [
     {"Expense": "Mortgage/Rent", "Monthly Amount": 0.0, "Notes": ""},
     {"Expense": "Car payment", "Monthly Amount": 0.0, "Notes": ""},
@@ -85,6 +88,7 @@ DEFAULT_FIXED = [
     {"Expense": "Phone", "Monthly Amount": 0.0, "Notes": ""},
     {"Expense": "Internet", "Monthly Amount": 0.0, "Notes": ""},
 ]
+
 DEFAULT_VARIABLE = [
     {"Expense": "Utilities", "Monthly Amount": 0.0, "Notes": ""},
     {"Expense": "Groceries", "Monthly Amount": 0.0, "Notes": ""},
@@ -95,26 +99,31 @@ DEFAULT_VARIABLE = [
     {"Expense": "Pet Expenses", "Monthly Amount": 0.0, "Notes": ""},
     {"Expense": "Other", "Monthly Amount": 0.0, "Notes": ""},
 ]
+
 DEFAULT_SAVING = [
     {"Bucket": "Retirement", "Monthly Amount": 0.0, "Notes": ""},
     {"Bucket": "Brokerage", "Monthly Amount": 0.0, "Notes": ""},
     {"Bucket": "Emergency fund", "Monthly Amount": 0.0, "Notes": ""},
 ]
+
 DEFAULT_DEBT = [
     {"Debt": "Credit card", "Balance": 0.0, "APR %": 0.0, "Monthly Payment": 0.0, "Notes": ""},
 ]
+
 DEFAULT_ASSETS = [
     {"Asset": "Checking", "Value": 0.0, "Notes": ""},
     {"Asset": "Savings", "Value": 0.0, "Notes": ""},
     {"Asset": "Brokerage", "Value": 0.0, "Notes": ""},
     {"Asset": "Retirement", "Value": 0.0, "Notes": ""},
     {"Asset": "Value of Home (minus debt)", "Value": 0.0, "Notes": ""},
-    {"Asset": "Value of Vehicle (minus debt)", "Value": 0.0, "Notes": ""}
+    {"Asset": "Value of Vehicle (minus debt)", "Value": 0.0, "Notes": ""},
 ]
+
 DEFAULT_LIABILITIES = [
     {"Liability": "Mortgage", "Value": 0.0, "Notes": ""},
     {"Liability": "Car loan", "Value": 0.0, "Notes": ""},
 ]
+
 
 # -------------------------
 # Main UI
@@ -126,17 +135,27 @@ def render_personal_finance_dashboard():
         "Enter your numbers, and the tool does the math."
     )
 
+    # -------------------------
+    # Initialize widget state ONCE
+    # (Fixes: user types value, rerun happens, and widget snaps back to default)
+    # -------------------------
+    if "pf_month_label" not in st.session_state:
+        st.session_state["pf_month_label"] = datetime.now().strftime("%B %Y")
+    if "pf_tax_rate" not in st.session_state:
+        st.session_state["pf_tax_rate"] = 0.0
+    if "pf_income_is" not in st.session_state:
+        st.session_state["pf_income_is"] = "Net (after tax)"
+
     # ---- Global settings ----
     with st.expander("Settings", expanded=False):
         c1, c2, c3 = st.columns([1, 1, 1], gap="large")
         with c1:
-            month_label = st.text_input("Month label", value=datetime.now().strftime("%B %Y"), key="pf_month_label")
+            month_label = st.text_input("Month label", key="pf_month_label")
         with c2:
             tax_rate = st.number_input(
                 "Estimated effective tax rate (%)",
                 min_value=0.0,
                 max_value=60.0,
-                value=float(st.session_state.get("pf_tax_rate", 0.0) or 0.0),
                 step=0.5,
                 key="pf_tax_rate",
                 help="Optional. If you enter *gross* income, this helps estimate post-tax cash flow.",
@@ -145,45 +164,17 @@ def render_personal_finance_dashboard():
             income_is = st.selectbox(
                 "Income amounts are…",
                 ["Net (after tax)", "Gross (before tax)"],
-                index=0,
                 key="pf_income_is",
             )
 
-    # ---- Tables ----
-    if "pf_income_df" not in st.session_state:
-        st.session_state["pf_income_df"] = pd.DataFrame(DEFAULT_INCOME)
-
-    income_df = st.session_state["pf_income_df"]
-
-    if "pf_fixed_df" not in st.session_state:
-        st.session_state["pf_fixed_df"] = pd.DataFrame(DEFAULT_FIXED)
-
-    fixed_df = st.session_state["pf_fixed_df"]
-
-    if "pf_variable_df" not in st.session_state:
-        st.session_state["pf_variable_df"] = pd.DataFrame(DEFAULT_VARIABLE)
-
-    variable_df = st.session_state["pf_variable_df"]
-
-    if "pf_saving_df" not in st.session_state:
-        st.session_state["pf_saving_df"] = pd.DataFrame(DEFAULT_SAVING)
-
-    saving_df = st.session_state["pf_saving_df"]
-
-    if "pf_debt_df" not in st.session_state:
-        st.session_state["pf_debt_df"] = pd.DataFrame(DEFAULT_DEBT)
-
-    debt_df = st.session_state["pf_debt_df"]
-
-    if "pf_assets_df" not in st.session_state:
-        st.session_state["pf_assets_df"] = pd.DataFrame(DEFAULT_ASSETS)
-
-    assets_df = st.session_state["pf_assets_df"]
-
-    if "pf_liabilities_df" not in st.session_state:
-        st.session_state["pf_liabilities_df"] = pd.DataFrame(DEFAULT_LIABILITIES)
-
-    liabilities_df = st.session_state["pf_liabilities_df"]
+    # ---- Tables (persisted) ----
+    income_df = _ensure_df("pf_income_df", DEFAULT_INCOME)
+    fixed_df = _ensure_df("pf_fixed_df", DEFAULT_FIXED)
+    variable_df = _ensure_df("pf_variable_df", DEFAULT_VARIABLE)
+    saving_df = _ensure_df("pf_saving_df", DEFAULT_SAVING)
+    debt_df = _ensure_df("pf_debt_df", DEFAULT_DEBT)
+    assets_df = _ensure_df("pf_assets_df", DEFAULT_ASSETS)
+    liabilities_df = _ensure_df("pf_liabilities_df", DEFAULT_LIABILITIES)
 
     st.subheader("Your Monthly Cash Flow")
 
@@ -194,7 +185,7 @@ def render_personal_finance_dashboard():
 
         with tab_income:
             st.write("Add your income sources (monthly amounts).")
-            income_df = st.data_editor(
+            edited_income = st.data_editor(
                 income_df,
                 num_rows="dynamic",
                 use_container_width=True,
@@ -203,12 +194,12 @@ def render_personal_finance_dashboard():
                     "Monthly Amount": st.column_config.NumberColumn(min_value=0.0, step=50.0, format="%.2f"),
                 },
             )
-            st.session_state["pf_income_df"] = income_df
+            st.session_state["pf_income_df"] = edited_income
 
         with tab_exp:
             st.write("Split your expenses into fixed & variable so you can see what's flexible.")
             st.markdown("**Fixed Expenses**")
-            fixed_df = st.data_editor(
+            edited_fixed = st.data_editor(
                 fixed_df,
                 num_rows="dynamic",
                 use_container_width=True,
@@ -217,10 +208,10 @@ def render_personal_finance_dashboard():
                     "Monthly Amount": st.column_config.NumberColumn(min_value=0.0, step=25.0, format="%.2f"),
                 },
             )
-            st.session_state["pf_fixed_df"] = fixed_df
+            st.session_state["pf_fixed_df"] = edited_fixed
 
             st.markdown("**Variable Expenses**")
-            variable_df = st.data_editor(
+            edited_variable = st.data_editor(
                 variable_df,
                 num_rows="dynamic",
                 use_container_width=True,
@@ -229,11 +220,11 @@ def render_personal_finance_dashboard():
                     "Monthly Amount": st.column_config.NumberColumn(min_value=0.0, step=25.0, format="%.2f"),
                 },
             )
-            st.session_state["pf_variable_df"] = variable_df
+            st.session_state["pf_variable_df"] = edited_variable
 
         with tab_save:
             st.write("Monthly contributions you want to make (Retirement, brokerage, emergency fund, etc.).")
-            saving_df = st.data_editor(
+            edited_saving = st.data_editor(
                 saving_df,
                 num_rows="dynamic",
                 use_container_width=True,
@@ -242,7 +233,14 @@ def render_personal_finance_dashboard():
                     "Monthly Amount": st.column_config.NumberColumn(min_value=0.0, step=25.0, format="%.2f"),
                 },
             )
-            st.session_state["pf_saving_df"] = saving_df
+            st.session_state["pf_saving_df"] = edited_saving
+
+    # Always calculate from the latest stored tables
+    income_df = st.session_state["pf_income_df"]
+    fixed_df = st.session_state["pf_fixed_df"]
+    variable_df = st.session_state["pf_variable_df"]
+    saving_df = st.session_state["pf_saving_df"]
+    debt_df = st.session_state["pf_debt_df"]
 
     # ---- Calculate monthly cash flow ----
     total_income = _sum_df(income_df, "Monthly Amount")
@@ -262,23 +260,33 @@ def render_personal_finance_dashboard():
     remaining = net_income - expenses_total - saving_total
 
     # ---- Emergency Minimum ----
-    # All fixed expenses + essential variable categories + debt minimum payments
     ESSENTIAL_VARIABLE_KEYWORDS = [
-        # groceries / food at home
-        "grocery", "groceries",
-
-        # utilities
-        "electric", "electricity", "gas", "water", "sewer", "trash", "garbage",
-        "utility", "utilities",
-
-        # comms
-        "internet", "wifi", "phone", "cell",
-
-        # insurance + health (common essentials)
-        "insurance", "medical", "health", "prescription", "rx",
-
-        # transportation essentials
-        "gasoline", "fuel", "transit", "train", "toll", "parking",
+        "grocery",
+        "groceries",
+        "electric",
+        "electricity",
+        "gas",
+        "water",
+        "sewer",
+        "trash",
+        "garbage",
+        "utility",
+        "utilities",
+        "internet",
+        "wifi",
+        "phone",
+        "cell",
+        "insurance",
+        "medical",
+        "health",
+        "prescription",
+        "rx",
+        "gasoline",
+        "fuel",
+        "transit",
+        "train",
+        "toll",
+        "parking",
     ]
 
     essential_variable = _sum_by_keywords(
@@ -289,7 +297,6 @@ def render_personal_finance_dashboard():
     )
 
     debt_minimums = _sum_df(debt_df, "Monthly Payment")
-
     emergency_minimum_monthly = fixed_total + essential_variable + debt_minimums
 
     st.markdown(
@@ -297,20 +304,18 @@ def render_personal_finance_dashboard():
         <style>
         /* ---------- Hero Summary Card ---------- */
         div[data-testid="stVerticalBlockBorderWrapper"]:has(#pf-summary-card) {
-            background: #161B22 !important; /* same as cards, lighter than page */
+            background: #161B22 !important;
             border: 1px solid rgba(255,255,255,.10) !important;
             border-radius: 16px !important;
             padding: 14px 14px 10px 14px !important;
             margin-top: 6px;
         }
 
-        /* Summary header spacing */
         div[data-testid="stVerticalBlockBorderWrapper"]:has(#pf-summary-card) h3 {
             margin-top: 0.15rem !important;
             margin-bottom: 0.85rem !important;
         }
 
-        /* Metrics inside summary: slightly elevated */
         div[data-testid="stVerticalBlockBorderWrapper"]:has(#pf-summary-card)
         div[data-testid="metric-container"] {
             background: rgba(255,255,255,.02) !important;
@@ -324,7 +329,6 @@ def render_personal_finance_dashboard():
     with right:
         with st.container(border=True):
             st.markdown('<div id="pf-summary-card"></div>', unsafe_allow_html=True)
-
             st.markdown("### Your Summary")
 
             top_l, top_r = st.columns(2, gap="medium")
@@ -362,9 +366,6 @@ def render_personal_finance_dashboard():
             else:
                 st.success("You’ve got some breathing room this month.")
 
-
-            st.markdown("</div>", unsafe_allow_html=True)
-
     st.divider()
     st.subheader("🆘 Your Emergency Minimum")
 
@@ -375,15 +376,9 @@ def render_personal_finance_dashboard():
     e4.metric("12 months", _money(emergency_minimum_monthly * 12))
 
     st.write("Your emergency minimum covers:")
-    st.write(
-        f"• **Fixed bills** (everything in your fixed expenses): {_money(fixed_total)}"
-    )
-    st.write(
-        f"• **Essentials** (groceries, utilities, transportation): {_money(essential_variable)}"
-    )
-    st.write(
-        f"• **Debt payments** you must make: {_money(debt_minimums)}"
-    )
+    st.write(f"• **Fixed bills** (everything in your fixed expenses): {_money(fixed_total)}")
+    st.write(f"• **Essentials** (groceries, utilities, transportation): {_money(essential_variable)}")
+    st.write(f"• **Debt payments** you must make: {_money(debt_minimums)}")
 
     st.divider()
 
@@ -394,8 +389,8 @@ def render_personal_finance_dashboard():
 
     with a_col:
         st.markdown("**Assets**")
-        assets_df = st.data_editor(
-            assets_df,
+        edited_assets = st.data_editor(
+            st.session_state["pf_assets_df"],
             num_rows="dynamic",
             use_container_width=True,
             key="pf_assets_editor",
@@ -403,12 +398,12 @@ def render_personal_finance_dashboard():
                 "Value": st.column_config.NumberColumn(min_value=0.0, step=100.0, format="%.2f"),
             },
         )
-        st.session_state["pf_assets_df"] = assets_df
+        st.session_state["pf_assets_df"] = edited_assets
 
     with l_col:
         st.markdown("**Liabilities**")
-        liabilities_df = st.data_editor(
-            liabilities_df,
+        edited_liabilities = st.data_editor(
+            st.session_state["pf_liabilities_df"],
             num_rows="dynamic",
             use_container_width=True,
             key="pf_liabilities_editor",
@@ -416,7 +411,10 @@ def render_personal_finance_dashboard():
                 "Value": st.column_config.NumberColumn(min_value=0.0, step=100.0, format="%.2f"),
             },
         )
-        st.session_state["pf_liabilities_df"] = liabilities_df
+        st.session_state["pf_liabilities_df"] = edited_liabilities
+
+    assets_df = st.session_state["pf_assets_df"]
+    liabilities_df = st.session_state["pf_liabilities_df"]
 
     total_assets = _sum_df(assets_df, "Value")
     total_liabilities = _sum_df(liabilities_df, "Value")
@@ -433,8 +431,8 @@ def render_personal_finance_dashboard():
     st.subheader("Debt Details")
     st.caption("This doesn't affect net worth beyond the liability values — it's here for clarity and planning.")
 
-    debt_df = st.data_editor(
-        debt_df,
+    edited_debt = st.data_editor(
+        st.session_state["pf_debt_df"],
         num_rows="dynamic",
         use_container_width=True,
         key="pf_debt_editor",
@@ -444,15 +442,24 @@ def render_personal_finance_dashboard():
             "Monthly Payment": st.column_config.NumberColumn(min_value=0.0, step=10.0, format="%.2f"),
         },
     )
-    st.session_state["pf_debt_df"] = debt_df
+    st.session_state["pf_debt_df"] = edited_debt
 
-    total_debt_payment = _sum_df(debt_df, "Monthly Payment")
+    total_debt_payment = _sum_df(st.session_state["pf_debt_df"], "Monthly Payment")
     st.metric("Total Monthly Debt Payments", _money(total_debt_payment))
 
     st.divider()
 
     # ---- Exports & snapshot ----
     st.subheader("Export/Save Snapshot")
+
+    # Pull latest tables (post-edit)
+    income_df = st.session_state["pf_income_df"]
+    fixed_df = st.session_state["pf_fixed_df"]
+    variable_df = st.session_state["pf_variable_df"]
+    saving_df = st.session_state["pf_saving_df"]
+    assets_df = st.session_state["pf_assets_df"]
+    liabilities_df = st.session_state["pf_liabilities_df"]
+    debt_df = st.session_state["pf_debt_df"]
 
     snapshot = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
@@ -526,6 +533,9 @@ def render_personal_finance_dashboard():
         st.warning("This clears the tool’s saved tables in this session.")
         if st.button("Reset now", type="primary", key="pf_reset_btn"):
             for k in [
+                "pf_month_label",
+                "pf_tax_rate",
+                "pf_income_is",
                 "pf_income_df",
                 "pf_fixed_df",
                 "pf_variable_df",
