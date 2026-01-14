@@ -272,11 +272,14 @@ def render_personal_finance_dashboard():
         tab_income, tab_exp, tab_save = st.tabs(["Income", "Expenses", "Saving/Investing"])
 
         with tab_income:
-            st.write("Add your income sources (monthly amounts).")
+            st.write(
+                "Add your income sources (monthly amounts). "
+                "If you have a two-income household, include both here."
+            )
             with tab_exp:
                 st.write("Split your expenses into fixed & variable so you can see what's flexible.")
 
-                with st.expander("Quick reality check (helps your numbers be accurate)", expanded=False):
+                with st.expander("Quick reality check to help your numbers be accurate)", expanded=False):
                     st.caption(
                         "This dashboard is only as good as the inputs. Before you guess, take 5-10 minutes to be brutally honest "
                         "and scan the last 1-2 months of statements."
@@ -285,19 +288,19 @@ def render_personal_finance_dashboard():
                     st.markdown(
                         """
                             **Where to look**
-                            - **Bank & credit card statements:** Search for common merchants (Starbucks, Dunkin, Wawa, etc.)
-                            - **Amazon:** Check **Subscribe & Save** and recurring orders
-                            - **Apple/Google subscriptions:** iCloud / Google Drive storage, app subscriptions
-                            - **Spotify/Netflix/Hulu/YouTube Premium**
-                            - **Gym memberships, class packs, and any “trial turned paid”**
-                            - **Vitamins/supplements**, skincare, contact supplies
-                            - **Coffee runs, snacks, “little treats”** (they add up fast)
+                            - Bank & credit card statements: Search for common merchants (Starbucks, Dunkin, Wawa, etc.)
+                            - Amazon: Check Subscribe & Save and recurring orders
+                            - Apple/Google subscriptions: iCloud / Google Drive storage, app subscriptions
+                            - Spotify/Netflix/HBO Max/Hulu/Paramount Plus/Peacock/YouTube Premium
+                            - Gym memberships, class packs, and any “trial turned paid”
+                            - Vitamins/supplements, skincare, contact supplies
+                            - Coffee runs, snacks, “little treats” (they add up fast)
 
                             **Tip:** If something hits monthly (or “randomly but often”), it belongs here.
                         """
                     )
-                    st.info("Goal: get to a realistic monthly average, not a perfect number.")
-                    st.checkbox("✅ I checked statements & subscriptions before filling this out", key="pf_expenses_reality_check")
+                    st.info("Goal: Get to a realistic monthly average, not a perfect number.")
+                    st.checkbox("I checked statements & subscriptions before filling this out", key="pf_expenses_reality_check")
             with st.form("pf_income_form", border=False):
                 income_edit = st.data_editor(
                     st.session_state["pf_income_df"],
@@ -316,9 +319,6 @@ def render_personal_finance_dashboard():
                         numeric_cols=["Monthly Amount"],
                     )
                     st.rerun()
-
-        with tab_exp:
-            st.write("Split your expenses into fixed & variable so you can see what's flexible.")
 
             st.markdown("**Fixed Expenses**")
             with st.form("pf_fixed_form", border=False):
@@ -519,7 +519,7 @@ def render_personal_finance_dashboard():
         st.markdown("### Summary")
         if not st.session_state.get("pf_expenses_reality_check", False):
             st.info(
-                "Quick reminder: reviewing bank statements and subscriptions "
+                "Quick reminder: Reviewing bank statements and subscriptions "
                 "can help make your expense numbers more accurate."
             )
 
