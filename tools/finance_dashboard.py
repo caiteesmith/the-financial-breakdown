@@ -379,7 +379,7 @@ def render_personal_finance_dashboard():
                 if income_is == "Gross (before tax)":
                     if st.session_state["pf_gross_mode"] == "Manual deductions":
                         st.caption(
-                            f"Manual deductions applied: {_money(manual_deductions_total)} · "
+                            f"Manual deductions applied: {_money(manual_deductions_total)}\n"
                             f"Company match tracked: {_money(company_match)}"
                         )
                         if company_match > 0 or employee_retirement > 0:
