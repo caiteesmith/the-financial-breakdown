@@ -513,6 +513,25 @@ def render_personal_finance_dashboard():
                     st.rerun()
 
         with tab_exp:
+            with st.expander("Quick reality check to help your numbers be accurate", expanded=False):
+                st.caption(
+                    "This dashboard is only as good as the inputs. Before you guess, take 5-10 minutes to be brutally honest "
+                    "and scan the last 1-2 months of statements."
+                )
+                st.markdown(
+                            """
+                        **Where to look**
+
+                        - **Bank & credit card statements:** Search common merchants & watch for fees/interest
+                        - **Amazon:** Subscribe & Save, recurring household orders, repeat purchases
+                        - **Apple/Google:** Storage plans, app subscriptions, in-app purchases
+                        - **Streaming:** Netflix, Hulu, HBO Max, Disney+, Spotify, YouTube Premium, etc.  
+                        - **Subscriptions:** Streaming, Amazon Prime, gym, memberships
+                        - **Gaming:** Xbox/PlayStation/Nintendo Online, game passes, etc.  
+
+                            """
+                        )
+
             with st.form("pf_expenses_form", border=False):
                 st.markdown("**Fixed Expenses**")
                 fixed_edit = st.data_editor(
@@ -676,13 +695,74 @@ def render_personal_finance_dashboard():
                     "Gross Income Invested",
                     _pct(investing_rate_of_gross),
                     help="Investing divided by total pre-tax income.",
-            )
+                )
 
             with st.container(border=True):
                 _section("Remaining (After Bills, Saving & Investing)")
                 c1, c2 = st.columns(2, gap="medium")
                 c1.metric("Monthly", _money(remaining))
                 c2.metric("Weekly", _money(remaining / 4.33))
+
+                # ✅ Anecdote section added back
+                with st.expander("What you can do with the remaining", expanded=False):
+                    st.caption(
+                        "This is optional guidance, there's no single right answer. "
+                        "Use what fits your goals and your current season of life."
+                    )
+
+                    if remaining <= 0:
+                        st.info(
+                            "You're currently allocating all of your income. "
+                            "If things feel tight, consider reducing discretionary expenses or lowering savings temporarily."
+                        )
+                    else:
+                        st.markdown(f"**You have {_money(remaining)} available each month.** Here are common ways people use it:")
+                        bullets = [
+                            "Build/boost savings: emergency fund, short-term goals, or sinking funds.",
+                            "Invest more: brokerage, retirement, or HSA if you're not maxing them yet.",
+                            "Spend intentionally: guilt-free fun money that's already accounted for.",
+                            "Reallocate later: it’s okay to wait a month and decide once patterns emerge.",
+                        ]
+                        if has_debt:
+                            bullets.insert(2, "Pay down debt faster: extra principal on high-interest debt or your mortgage.")
+                        else:
+                            bullets.insert(2, "Invest toward future goals: home upgrades, travel, FIRE, or long-term flexibility.")
+
+                        for b in bullets:
+                            st.markdown(f"- {b}")
+
+            # “How you’re doing”
+            with st.container(border=True):
+                _section("How you're doing")
+                buffer = max(remaining, 0.0)
+
+                if remaining < 0:
+                    st.error(
+                        f"You're over-allocated by **{_money(abs(remaining))}** this month. No shame, it just means something needs to give (even temporarily)."
+                    )
+                    st.markdown(
+                        "- Try trimming **wants** first (subscriptions, dining out, random spending)\n"
+                        "- Or lower saving/investing for a month while you stabilize\n"
+                        "- If debt is heavy, consider focusing extra money on the highest-interest balance"
+                    )
+                elif buffer < 200:
+                    st.warning(
+                        f"You've got **{_money(buffer)}** left unallocated. That's a tight buffer, doable, but it can feel stressful if anything pops up."
+                    )
+                    st.markdown("If it feels tight, aim for a buffer closer to **\\$200-\\$500**. Treat this like “life happens” money.")
+                elif buffer < 750:
+                    st.success(f"You've got **{_money(buffer)}** left unallocated. That's a solid buffer, you've got breathing room.")
+                    st.markdown("This is a great range for stability and flexibility. You can decide later whether to save it, invest it, or use it intentionally.")
+                else:
+                    st.success(f"You've got **{_money(buffer)}** left unallocated. You're doing really good, this is strong flexibility.")
+                    st.markdown(
+                        "- You could:\n"
+                        "  - Build your emergency fund faster\n"
+                        "  - Invest more\n"
+                        "  - Pay down debt faster\n"
+                        "  - Set aside guilt-free fun money\n"
+                        "  - Or keep it as a buffer while you watch patterns for a few months"
+                    )
 
             with st.container(border=True):
                 _section("Spending & Saving Split")
