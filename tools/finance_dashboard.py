@@ -575,6 +575,12 @@ def render_personal_finance_dashboard():
         with tab_save:
             with st.form("pf_saveinvest_form", border=False):
                 st.write("Monthly contributions you want to make.")
+                with st.expander("Retirement benchmark", expanded=False):
+                    st.caption(
+                        "Many planners suggest aiming for ~15% of gross income toward retirement over time "
+                        "(including employer match). This is a reference point, not a rule."
+                    )
+
                 s_col, i_col = st.columns(2, gap="large")
 
                 with s_col:
