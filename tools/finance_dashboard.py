@@ -443,6 +443,7 @@ def render_personal_finance_dashboard():
             "investing_takehome_only": float(metrics["investing_cashflow"]),
             "left_over": float(metrics["remaining"]),
             "safe_to_spend_weekly": float(metrics["remaining"] / 4.33),
+            "safe_to_spend_biweekly": float(metrics["remaining"] / (4.33 / 2)),
             "safe_to_spend_daily": float(metrics["remaining"] / 30.4),
             "retirement_total_employee_plus_match": float(metrics["total_retirement_contrib"]),
             "paycheck_breakdown_enabled": bool(st.session_state.get("pf_use_paycheck_breakdown", False)),

@@ -120,7 +120,7 @@ def render_summary_panel(metrics: dict) -> bool:
 
         with st.container(border=True):
             c5, c6 = st.columns(2, gap="medium")
-            c5.metric("Total Outflow", money(total_outflow))
+            c5.metric("Total Expenses", money(total_outflow))
             c6.metric(
                 "Gross Income Invested",
                 pct(investing_rate_of_gross),
@@ -129,25 +129,37 @@ def render_summary_panel(metrics: dict) -> bool:
 
         with st.container(border=True):
             _section("Remaining (After Bills, Saving & Investing)")
-            c1, c2 = st.columns(2, gap="medium")
-            c1.metric("Monthly", money(remaining))
-            c2.metric("Weekly", money(remaining / 4.33))
+
+            safe_weekly = remaining / 4.33
+            safe_biweekly = remaining / (4.33 / 2)
+            safe_daily = remaining / 30.4
+
+            r1c1, r1c2 = st.columns(2, gap="medium")
+            r1c1.metric("Monthly", money(remaining))
+            r1c2.metric("Biweekly", money(safe_biweekly))
+
+            r2c1, r2c2 = st.columns(2, gap="medium")
+            r2c1.metric("Weekly", money(safe_weekly))
+            r2c2.metric("Daily", money(safe_daily))
 
             with st.expander("What you can do with the remaining", expanded=False):
-                st.caption("Optional guidance. There’s no one right answer. Use what fits your goals and your season of life.")
+                st.caption(
+                    "This is optional guidance, there's no single right answer. "
+                    "Use what fits your goals and your current season of life."
+                )
 
                 if remaining <= 0:
                     st.info(
-                        "You’re currently allocating all of your income. "
+                        "You're currently allocating all of your income. "
                         "If it feels tight, consider trimming non-essentials or lowering saving/investing temporarily."
                     )
                 else:
                     st.markdown(f"**You have {money(remaining)} available each month.** Common uses:")
                     bullets = [
-                        "Build/boost savings: emergency fund, short-term goals, sinking funds.",
-                        "Invest more: brokerage, retirement, or HSA if you’re not maxing yet.",
-                        "Spend intentionally: guilt-free fun money that’s already accounted for.",
-                        "Reallocate later: it’s okay to wait a month and decide once patterns emerge.",
+                        "Build/boost savings: Emergency fund, short-term goals, sinking funds.",
+                        "Invest more: Brokerage, retirement, or HSA if you're not maxing yet.",
+                        "Spend intentionally: Guilt-free fun money that's already accounted for.",
+                        "Reallocate later: It's okay to wait a month and decide once patterns emerge.",
                     ]
                     if has_debt:
                         bullets.insert(2, "Pay down debt faster: extra principal on high-interest debt or your mortgage.")
@@ -163,7 +175,7 @@ def render_summary_panel(metrics: dict) -> bool:
 
             if remaining < 0:
                 st.error(
-                    f"You’re over-allocated by **{money(abs(remaining))}** this month. No shame — it just means something needs to give (even temporarily)."
+                    f"You're over-allocated by **{money(abs(remaining))}** this month. No shame, it just means something needs to give (even temporarily)."
                 )
                 st.markdown(
                     "- Trim **non-essentials** first (subscriptions, dining out, random spending)\n"
@@ -172,14 +184,14 @@ def render_summary_panel(metrics: dict) -> bool:
                 )
             elif buffer < 200:
                 st.warning(
-                    f"You’ve got **{money(buffer)}** left unallocated. That’s a tight buffer — doable, but stressful when life happens."
+                    f"You've got **{money(buffer)}** left unallocated. That's a tight buffer, doable, but stressful when life happens."
                 )
-                st.markdown("If it feels tight, aim for a buffer closer to **$200–$500**.")
+                st.markdown("If it feels tight, aim for a buffer closer to **\\$200-\\$500**.")
             elif buffer < 750:
-                st.success(f"You’ve got **{money(buffer)}** left unallocated. Solid buffer. Breathing room.")
+                st.success(f"You've got **{money(buffer)}** left unallocated. Solid buffer. Breathing room.")
                 st.markdown("Great range for stability + flexibility. You can decide later whether to save it, invest it, or use it intentionally.")
             else:
-                st.success(f"You’ve got **{money(buffer)}** left unallocated. Strong flexibility.")
+                st.success(f"You've got **{money(buffer)}** left unallocated. Strong flexibility.")
                 st.markdown(
                     "- You could:\n"
                     "  - Build your emergency fund faster\n"

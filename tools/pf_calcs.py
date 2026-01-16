@@ -26,7 +26,7 @@ def compute_metrics() -> dict:
     use_breakdown = bool(st.session_state.get("pf_use_paycheck_breakdown", False))
     net_income = total_income - manual_deductions_total if use_breakdown else total_income
 
-    est_tax = 0.0  # placeholder if you add tax-rate mode later
+    est_tax = 0.0
 
     fixed_total = sum_df(fixed_df, "Monthly Amount")
     essential_total = sum_df(essential_df, "Monthly Amount")
@@ -44,6 +44,9 @@ def compute_metrics() -> dict:
 
     total_outflow = expenses_total + total_saving_and_investing_cashflow + total_monthly_debt_payments
     remaining = net_income - total_outflow
+    safe_weekly = remaining / 4.33
+    safe_biweekly = remaining / (4.33 / 2)
+    safe_daily = remaining / 30.4
     has_debt = total_monthly_debt_payments > 0
 
     total_assets = sum_df(assets_df, "Value")
@@ -106,6 +109,9 @@ def compute_metrics() -> dict:
         "total_monthly_debt_payments": total_monthly_debt_payments,
         "total_outflow": total_outflow,
         "remaining": remaining,
+        "safe_weekly": safe_weekly,
+        "safe_biweekly": safe_biweekly,
+        "safe_daily": safe_daily,
         "has_debt": has_debt,
 
         "total_assets": total_assets,

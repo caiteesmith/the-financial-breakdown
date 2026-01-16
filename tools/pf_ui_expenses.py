@@ -4,7 +4,7 @@ from tools.pf_state import sanitize_editor_df
 def render_expenses_tab():
     with st.expander("Quick reality check to help your numbers be accurate", expanded=False):
         st.caption(
-            "Before you enter numbers, scan the last 1–2 months of statements so your totals match real life."
+            "Before you enter numbers, scan the last 1-2 months of statements so your totals match real life."
         )
         st.markdown(
             """
