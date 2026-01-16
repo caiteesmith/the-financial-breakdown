@@ -6,7 +6,7 @@ def render_saveinvest_tab():
         st.write("Monthly contributions you want to make.")
         with st.expander("Retirement benchmark", expanded=False):
             st.caption(
-                "Many planners suggest ~10–20% of **gross income** toward retirement over a career "
+                "Many planners suggest ~15% of gross income toward retirement over a career "
                 "(including employer match). This is a reference point, not a rule."
             )
 

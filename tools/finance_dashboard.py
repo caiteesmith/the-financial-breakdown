@@ -575,90 +575,95 @@ def render_personal_finance_dashboard():
         },
     }
 
-    cA, cB, cC = st.columns(3, gap="large")
+    cA, cB = st.columns(2, gap="large")
     with cA:
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
         filename = f"personal_finance_snapshot_{timestamp}.json"
         _download_json_button("Download snapshot (JSON)", snapshot, filename)
 
     with cB:
-        combined = pd.concat(
-            [
-                st.session_state["pf_income_df"].assign(Table="Income"),
-                st.session_state["pf_fixed_df"].assign(Table="Fixed Expenses"),
-                st.session_state["pf_essential_df"].assign(Table="Essential Expenses"),
-                st.session_state["pf_nonessential_df"].assign(Table="Non-Essential Expenses"),
-                st.session_state["pf_saving_df"].assign(Table="Saving"),
-                st.session_state["pf_investing_df"].assign(Table="Investing"),
-            ],
-            ignore_index=True,
-            sort=False,
-        )
-        _download_csv_button("Download monthly tables (CSV)", combined, "personal_finance_monthly_tables.csv")
+        with st.expander("Import a saved snapshot", expanded=False):
+            st.caption("Upload a previously downloaded snapshot JSON to restore your dashboard inputs.")
 
-    with cC:
-        nw_combined = pd.concat(
-            [
-                st.session_state["pf_assets_df"].rename(columns={"Asset": "Item"}).assign(Type="Asset"),
-                st.session_state["pf_liabilities_df"].rename(columns={"Liability": "Item"}).assign(Type="Liability"),
-            ],
-            ignore_index=True,
-            sort=False,
-        )
-        _download_csv_button("Download net worth tables (CSV)", nw_combined, "personal_finance_net_worth_tables.csv")
+            uploader_key = f"pf_snapshot_uploader_{st.session_state['pf_uploader_nonce']}"
+            uploaded = st.file_uploader("Snapshot JSON", type=["json"], key=uploader_key)
 
-    with st.expander("Import a saved snapshot", expanded=False):
-        st.caption("Upload a previously downloaded snapshot JSON to restore your dashboard inputs.")
+            if uploaded is not None:
+                try:
+                    raw = uploaded.getvalue()
+                    sig = snapshot_signature(raw)
+                    snap = json.loads(raw.decode("utf-8"))
 
-        uploader_key = f"pf_snapshot_uploader_{st.session_state['pf_uploader_nonce']}"
-        uploaded = st.file_uploader("Snapshot JSON", type=["json"], key=uploader_key)
-
-        if uploaded is not None:
-            try:
-                raw = uploaded.getvalue()
-                sig = snapshot_signature(raw)
-                snap = json.loads(raw.decode("utf-8"))
-
-                if not isinstance(snap, dict) or "tables" not in snap:
-                    st.error("That file doesn't look like a valid dashboard snapshot.")
-                else:
-                    already_applied = sig == st.session_state.get("pf_last_import_sig", "")
-                    if already_applied:
-                        st.info("Snapshot already applied.")
+                    if not isinstance(snap, dict) or "tables" not in snap:
+                        st.error("That file doesn't look like a valid dashboard snapshot.")
                     else:
-                        st.success("Snapshot ready to import.")
-                        if st.button("Apply snapshot now", type="primary", width="stretch"):
-                            st.session_state["pf_pending_snapshot"] = snap
-                            st.session_state["pf_has_pending_import"] = True
-                            st.session_state["pf_last_import_sig"] = sig
-                            bump_uploader_nonce()
-                            st.rerun()
+                        already_applied = sig == st.session_state.get("pf_last_import_sig", "")
+                        if already_applied:
+                            st.info("Snapshot already applied.")
+                        else:
+                            st.success("Snapshot ready to import.")
+                            if st.button("Apply snapshot now", type="primary", width="stretch"):
+                                st.session_state["pf_pending_snapshot"] = snap
+                                st.session_state["pf_has_pending_import"] = True
+                                st.session_state["pf_last_import_sig"] = sig
+                                bump_uploader_nonce()
+                                st.rerun()
 
-            except Exception as e:
-                st.error(f"Couldn't read that file: {e}")
+                except Exception as e:
+                    st.error(f"Couldn't read that file: {e}")
 
-    with st.expander("Reset all data", expanded=False):
-        st.warning("This clears the tool's saved tables in this session.")
-        if st.button("Reset now", type="primary", key="pf_reset_btn", width="stretch"):
-            for k in list(st.session_state.keys()):
-                if k.startswith("pf_"):
-                    del st.session_state[k]
-            st.rerun()
+    # with cB:
+    #     combined = pd.concat(
+    #         [
+    #             st.session_state["pf_income_df"].assign(Table="Income"),
+    #             st.session_state["pf_fixed_df"].assign(Table="Fixed Expenses"),
+    #             st.session_state["pf_essential_df"].assign(Table="Essential Expenses"),
+    #             st.session_state["pf_nonessential_df"].assign(Table="Non-Essential Expenses"),
+    #             st.session_state["pf_saving_df"].assign(Table="Saving"),
+    #             st.session_state["pf_investing_df"].assign(Table="Investing"),
+    #         ],
+    #         ignore_index=True,
+    #         sort=False,
+    #     )
+    #     _download_csv_button("Download monthly tables (CSV)", combined, "personal_finance_monthly_tables.csv")
+
+    # with cC:
+    #     nw_combined = pd.concat(
+    #         [
+    #             st.session_state["pf_assets_df"].rename(columns={"Asset": "Item"}).assign(Type="Asset"),
+    #             st.session_state["pf_liabilities_df"].rename(columns={"Liability": "Item"}).assign(Type="Liability"),
+    #         ],
+    #         ignore_index=True,
+    #         sort=False,
+    #     )
+    #     _download_csv_button("Download net worth tables (CSV)", nw_combined, "personal_finance_net_worth_tables.csv")
 
     st.divider()
 
     # -------------------------
-    # PRIVACY
+    # PRIVACY & RESET
     # -------------------------
-    st.subheader("Privacy & Data")
-    with st.expander("Privacy & Data", expanded=False):
-        st.markdown(
-            """
-    **Your data stays local to this session.**
+    st.subheader("Privacy & Reset")
 
-    - This dashboard stores your inputs in temporary session state while the app is open.
-    - If you refresh the page or close the tab, your data can be cleared unless you export a snapshot.
-    - Snapshot files are downloaded to your device. Only you control where they're stored or shared.
-    - This app is not connected to your bank and does not pull transactions automatically.
-            """
-        )
+    p1, p2 = st.columns([1.2, 1.2], gap="large")
+    with p1:
+        with st.expander("Privacy & Data Notice", expanded=False):
+            st.markdown(
+                """
+        **Your data stays local to this session.**
+
+        - This dashboard stores your inputs in temporary session state while the app is open.
+        - If you refresh the page or close the tab, your data can be cleared unless you export a snapshot.
+        - Snapshot files are downloaded to your device. Only you control where they're stored or shared.
+        - This app is not connected to your bank and does not pull transactions automatically.
+                """
+            )
+
+    with p2:
+        with st.expander("Reset all data", expanded=False):
+            st.warning("This clears the tool's saved tables in this session.")
+            if st.button("Reset now", type="primary", key="pf_reset_btn", width="stretch"):
+                for k in list(st.session_state.keys()):
+                    if k.startswith("pf_"):
+                        del st.session_state[k]
+                st.rerun()
