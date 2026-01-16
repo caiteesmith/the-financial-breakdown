@@ -477,13 +477,13 @@ def render_personal_finance_dashboard():
         with c2:
             st.caption(
                 "**Debt Burden** shows what % of your take-home pay goes to minimum debt payments each month. "
-                "Under ~15% feels light, 15–30% is moderate, 30%+ is heavy."
+                "Under ~15% feels light, 15-30% is moderate, 30%+ is heavy."
             )
             fig_burden, _ = debt_burden_indicator(
                 net_income=net_income,
                 debt_payments=total_monthly_debt_payments,
             )
-            st.plotly_chart(fig_burden, use_container_width=True, key="pf_debt_burden_chart")
+            st.plotly_chart(fig_burden, width="stretch", key="pf_debt_burden_chart")
 
         with c3:
             st.caption(
@@ -500,14 +500,14 @@ def render_personal_finance_dashboard():
                 st.session_state["pf_debt_df"],
                 strategy=strategy,
             )
-            st.plotly_chart(fig_order, use_container_width=True, key="pf_debt_order_chart")
+            st.plotly_chart(fig_order, width="stretch", key="pf_debt_order_chart")
 
     st.divider()
 
     # -------------------------
     # EXPORT / SNAPSHOT
     # -------------------------
-    st.subheader("Export/Save Snapshot")
+    st.subheader("Export/Import Snapshot")
 
     month_label = st.session_state.get("pf_month_label", datetime.now().strftime("%B %Y"))
     tax_rate = float(st.session_state.get("pf_tax_rate", 0.0) or 0.0)
@@ -579,7 +579,7 @@ def render_personal_finance_dashboard():
     with cA:
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
         filename = f"personal_finance_snapshot_{timestamp}.json"
-        _download_json_button("Download snapshot (JSON)", snapshot, filename)
+        _download_json_button("Export snapshot", snapshot, filename)
 
     with cB:
         with st.expander("Import a saved snapshot", expanded=False):
