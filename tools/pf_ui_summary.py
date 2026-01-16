@@ -101,9 +101,9 @@ def render_summary_panel(metrics: dict) -> None:
         summary_box = st.container(border=True)
 
     with summary_box:
-        st.markdown("### Summary")
-
         if is_empty:
+            st.markdown("### Summary")
+
             st.caption(
                 "Once you add income, expenses, or saving/investing and click **Save** in the tabs, "
                 "this panel will fill in with your personalized snapshot."

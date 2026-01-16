@@ -168,7 +168,7 @@ def render_personal_finance_dashboard():
     st.session_state.setdefault("pf_uploader_nonce", 0)
     st.session_state.setdefault("pf_last_import_sig", "")
 
-    st.title("💸 Personal Finance Dashboard")
+    st.title("💸 Financial Breakdown")
 
     # ---- Widget defaults ----
     st.session_state.setdefault("pf_month_label", datetime.now().strftime("%B %Y"))
@@ -217,10 +217,10 @@ def render_personal_finance_dashboard():
     # -------------------------
     # EDITORS
     # -------------------------
-    st.subheader("Your Monthly Cash Flow")
     left, right = st.columns([1.1, 0.9], gap="large")
 
     with left:
+        st.subheader("Your Monthly Cash Flow")
         tab_income, tab_exp, tab_save = st.tabs(["Income", "Expenses", "Saving/Investing"])
 
         with tab_income:

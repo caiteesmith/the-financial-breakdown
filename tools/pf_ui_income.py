@@ -2,7 +2,7 @@ import streamlit as st
 from tools.pf_state import sanitize_editor_df
 
 def render_income_tab():
-    st.write("Add your income sources. If you have a two-income household, include both here.")
+    st.write("Add your income sources. If you have additional or supplemental income to add, include all here.")
     st.caption(
         "For paycheck-level accuracy (pre-tax 401k contributions, employer match, benefits, and taxes), "
         "use the optional toggle below."
