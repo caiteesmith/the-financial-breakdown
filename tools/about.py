@@ -15,9 +15,11 @@ def render_about():
                 In early 2025, I built a simple spreadsheet because I was tired of feeling vague about my money.
                 I wanted one clear place to see:
 
-                - What was coming in  
-                - What was going out  
-                - And how much was actually left  
+                - What I earned  
+                - What I spent  
+                - What I owed
+                - Where I could cut expenses
+                - And what was actually left  
 
                 Using that spreadsheet, I paid off about $20,000 of debt by mid-2025, including 3 credit cards, a consolidation loan, an auto loan, a student loan, and my financed iPhone.
 
@@ -27,22 +29,27 @@ def render_about():
                 """
             )
 
-        st.subheader("What this dashboard helps you do")
-
         with st.container(border=True):
+            st.subheader("What this tool helps you understand")
+
             st.markdown(
                 """
-                - **See your full month in one view**  
-                Income, fixed bills, essentials, non-essentials, saving, investing, and consumer debt, all in one layout.
+                **Your full monthly picture**  
+                See all your income, fixed bills, essentials, non-essentials, saving, investing, and consumer debt in one place.
 
-                - **Know your real “safe to spend” amount**  
-                After bills, saving, and debt payments, you'll see what's realistically left per month, week, and day.
+                **Your real breathing room**  
+                Clear calculations for what's safe to spend, per month, week, and day, after your actual obligations.
 
-                - **Get honest about debt**  
-                See payoff timelines, estimated interest, and whether any minimum payment isn't even covering the interest.
+                **Your debt trajectory**  
+                Honest payoff timelines, estimated interest, and alerts if any payment doesn't even cover interest.
 
-                - **Know your emergency minimum**  
-                If your income stopped, this shows what you'd actually need to stay afloat based on your real numbers.
+                **Your emergency minimum**  
+                A grounded number showing what you truly need each month if your income stopped.
+
+                **Your mortgage payoff path**  
+                The built-in Mortgage Payoff Calculator breaks down your amortization, total interest, and how extra payments change your payoff date, whether it's monthly extras, annual contributions, or a one-time lump sum.
+
+                Together, these give you the same clarity that helped me pay down debt, feel in control, and eventually buy a home.
                 """
             )
 
@@ -53,11 +60,13 @@ def render_about():
                 """
                 This is for you if you've ever thought:
 
-                - “I make okay money… so why does it never feel like enough?”  
+                - “I make okay money... so why does it never feel like enough?”  
                 - “I'm paying my cards, but I don't know when this will realistically end.”  
                 - “I just want to know if I'm okay (or not) without being judged.”  
+                - “Will I ever actually get out of debt?”  
+                - “I wish understanding my mortgage wasn't so confusing.”
 
-                It's not a bank-connected app, not a strict budget, and not about perfection. It's a clear snapshot so you can make decisions with your eyes open instead of guessing.
+                It's not a bank-connected app, not a strict budget, and not about perfection. It's about clarity, confidence, and knowing the real numbers behind your choices.
                 """
             )
 
