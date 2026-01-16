@@ -7,7 +7,7 @@ import streamlit as st
 
 from tools.finance_dashboard import render_personal_finance_dashboard
 from tools.mortgage_payoff import render_mortgage_payoff_calculator
-from pages.about import render_about
+from tools.about import render_about
 
 def main():
     st.set_page_config(page_title="Financial Breakdown", layout="wide")
