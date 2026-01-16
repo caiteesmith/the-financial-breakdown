@@ -203,19 +203,33 @@ def build_amortization_schedule(
     )
 
 
-def _balance_chart(schedule: pd.DataFrame) -> go.Figure:
+def _balance_chart(
+    schedule: pd.DataFrame,
+    baseline_schedule: Optional[pd.DataFrame] = None,
+) -> go.Figure:
     fig = go.Figure()
-    if schedule is None or schedule.empty:
-        return fig
 
-    fig.add_trace(
-        go.Scatter(
-            x=schedule["Date"],
-            y=schedule["Ending Balance"],
-            mode="lines",
-            name="Balance",
+    if baseline_schedule is not None and not baseline_schedule.empty:
+        fig.add_trace(
+            go.Scatter(
+                x=baseline_schedule["Date"],
+                y=baseline_schedule["Ending Balance"],
+                mode="lines",
+                name="Original balance (no extra)",
+                line=dict(dash="dash"),
+            )
         )
-    )
+
+    if schedule is not None and not schedule.empty:
+        fig.add_trace(
+            go.Scatter(
+                x=schedule["Date"],
+                y=schedule["Ending Balance"],
+                mode="lines",
+                name="With extra payments",
+            )
+        )
+
     fig.update_layout(
         title="Remaining Balance Over Time",
         xaxis_title="Date",
@@ -454,7 +468,13 @@ def render_mortgage_payoff_calculator():
             if hoa_v:
                 st.write(f"• **HOA**: {_money(hoa_v)}")
 
-        st.plotly_chart(_balance_chart(result.schedule), width="stretch")
+        st.plotly_chart(
+            _balance_chart(
+                schedule=result.schedule,
+                baseline_schedule=baseline_result.schedule,
+            ),
+            width="stretch",
+        )
 
         with st.expander("View amortization schedule", expanded=False):
             st.dataframe(
