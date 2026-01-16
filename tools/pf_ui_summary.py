@@ -9,15 +9,17 @@ from tools.pf_state import money, pct
 from tools.pf_visuals import cashflow_breakdown_chart
 
 
-def render_summary_panel(metrics: dict) -> bool:
+def render_summary_panel(metrics: dict) -> None:
     """
     Renders the right-side panel.
-    Returns True if empty-state welcome was shown (caller should return early).
+    No early return; summary is always available,
+    but is collapsed when state is empty.
     """
 
     def _section(title: str):
         st.markdown(
-            f"<div style='font-size:0.85rem; letter-spacing:.06em; text-transform:uppercase; opacity:.70; margin: 0.2rem 0 0.6rem 0;'>{title}</div>",
+            f"<div style='font-size:0.85rem; letter-spacing:.06em; text-transform:uppercase; "
+            f"opacity:.70; margin: 0.2rem 0 0.6rem 0;'>{title}</div>",
             unsafe_allow_html=True,
         )
 
@@ -32,6 +34,9 @@ def render_summary_panel(metrics: dict) -> bool:
             and (metrics.get("total_monthly_debt_payments", 0) <= 0)
         )
 
+    # -------------------------
+    # Pull metrics
+    # -------------------------
     net_income = float(metrics.get("net_income", 0.0) or 0.0)
     total_income = float(metrics.get("total_income", 0.0) or 0.0)
 
@@ -54,17 +59,19 @@ def render_summary_panel(metrics: dict) -> bool:
     total_liabilities = float(metrics.get("total_liabilities", 0.0) or 0.0)
 
     has_debt = bool(metrics.get("has_debt", False))
+    use_breakdown = bool(st.session_state.get("pf_use_paycheck_breakdown", False))
+
+    is_empty = _is_empty_state()
 
     # -------------------------
     # EMPTY STATE WELCOME (above Summary)
     # -------------------------
-    if _is_empty_state():
+    if is_empty:
         with st.container(border=True):
             st.markdown("### Welcome 👋")
             st.caption(
                 "This dashboard gives you a clear monthly snapshot of your income, spending, saving, debt, and net worth."
             )
-
             st.markdown(
                 """
                 **Start here:**
@@ -76,21 +83,32 @@ def render_summary_panel(metrics: dict) -> bool:
                 6. **Debt & Net Worth:** Optional, but it makes the picture way clearer.
 
                 **Tiny tips that keep this accurate**
-                - Use real numbers, not guesses. Pull from the last 1-2 months so it matches real life.
+                - Use real numbers, not guesses. Pull from the last 1–2 months so it matches real life.
                 - Convert to monthly amounts (ex: annual bill ÷ 12).
                 - Click **Save** in each tab to update your snapshot.
                 - Want to keep your data? Use **Export → Download snapshot** (then you can import it later).
                 """
             )
 
-        return True
+    # -------------------------
+    # SUMMARY
+    # -------------------------
+    if is_empty:
+        summary_box = st.expander("Summary", expanded=False)
+    else:
+        summary_box = st.container(border=True)
 
-    # -------------------------
-    # SUMMARY (normal state)
-    # -------------------------
-    with st.container(border=True):
+    with summary_box:
         st.markdown("### Summary")
 
+        if is_empty:
+            st.caption(
+                "Once you add income, expenses, or saving/investing and click **Save** in the tabs, "
+                "this panel will fill in with your personalized snapshot."
+            )
+            return
+
+        # ---------- This Month at a Glance ----------
         st.subheader("This Month at a Glance")
         fig, _, _ = cashflow_breakdown_chart(
             net_income=net_income,
@@ -101,12 +119,27 @@ def render_summary_panel(metrics: dict) -> bool:
         )
         st.plotly_chart(fig, width="stretch")
 
+        # ---------- Net & Gross ----------
         with st.container(border=True):
-            _section("Net & Gross Income")
-            c1, c2 = st.columns(2, gap="medium")
-            c1.metric("Net Income", money(net_income))
-            c2.metric("Gross Income", money(total_income))
+            if use_breakdown:
+                _section("Net & Gross Income")
+                c1, c2 = st.columns(2, gap="medium")
+                c1.metric("Net Income (after deductions)", money(net_income))
+                c2.metric("Gross Income", money(total_income))
+                st.caption(
+                    "Gross is what you entered under Income. "
+                    "Net subtracts the monthly deductions from the paycheck breakdown."
+                )
+            else:
+                _section("Net Income")
+                c1, _ = st.columns(2, gap="medium")
+                c1.metric("Monthly Income", money(net_income))
+                st.caption(
+                    "Paycheck breakdown is off, so this is treated as net income. "
+                    "If you enter gross pay, turn on paycheck breakdown to calculate net."
+                )
 
+        # ---------- Expenses / Debt / Save / Invest ----------
         with st.container(border=True):
             _section("Expenses, Debt, Investments, & Savings")
             c1, c2 = st.columns(2, gap="medium")
@@ -127,6 +160,7 @@ def render_summary_panel(metrics: dict) -> bool:
                 help="Investing divided by total pre-tax income.",
             )
 
+        # ---------- Remaining ----------
         with st.container(border=True):
             _section("Remaining (After Bills, Saving & Investing)")
 
@@ -164,18 +198,23 @@ def render_summary_panel(metrics: dict) -> bool:
                     if has_debt:
                         bullets.insert(2, "Pay down debt faster: extra principal on high-interest debt or your mortgage.")
                     else:
-                        bullets.insert(2, "Invest toward future goals: home upgrades, travel, FIRE, or long-term flexibility.")
+                        bullets.insert(
+                            2,
+                            "Invest toward future goals: home upgrades, travel, FIRE, or long-term flexibility.",
+                        )
 
                     for b in bullets:
                         st.markdown(f"- {b}")
 
+        # ---------- How you're doing ----------
         with st.container(border=True):
             _section("How you're doing")
             buffer = max(remaining, 0.0)
 
             if remaining < 0:
                 st.error(
-                    f"You're over-allocated by **{money(abs(remaining))}** this month. No shame, it just means something needs to give (even temporarily)."
+                    f"You're over-allocated by **{money(abs(remaining))}** this month. "
+                    "No shame, it just means something needs to give (even temporarily)."
                 )
                 st.markdown(
                     "- Trim **non-essentials** first (subscriptions, dining out, random spending)\n"
@@ -184,12 +223,16 @@ def render_summary_panel(metrics: dict) -> bool:
                 )
             elif buffer < 200:
                 st.warning(
-                    f"You've got **{money(buffer)}** left unallocated. That's a tight buffer, doable, but stressful when life happens."
+                    f"You've got **{money(buffer)}** left unallocated. "
+                    "That's a tight buffer, doable, but stressful when life happens."
                 )
                 st.markdown("If it feels tight, aim for a buffer closer to **\\$200-\\$500**.")
             elif buffer < 750:
                 st.success(f"You've got **{money(buffer)}** left unallocated. Solid buffer. Breathing room.")
-                st.markdown("Great range for stability + flexibility. You can decide later whether to save it, invest it, or use it intentionally.")
+                st.markdown(
+                    "Great range for stability + flexibility. You can decide later whether to save it, "
+                    "invest it, or use it intentionally."
+                )
             else:
                 st.success(f"You've got **{money(buffer)}** left unallocated. Strong flexibility.")
                 st.markdown(
@@ -201,6 +244,7 @@ def render_summary_panel(metrics: dict) -> bool:
                     "  - Or keep it as buffer while you watch patterns for a few months"
                 )
 
+        # ---------- Split + Net Worth ----------
         with st.container(border=True):
             _section("Spending & Saving Split")
             c1, c2, c3, c4 = st.columns(4, gap="medium")
@@ -208,12 +252,13 @@ def render_summary_panel(metrics: dict) -> bool:
             c2.metric("Wants", pct(wants_pct), help="Non-essential spending (subscriptions, dining, shopping, etc.).")
             c3.metric("Save & Invest", pct(save_invest_pct), help="Savings + investing/retirement contributions.")
             c4.metric("Unallocated", pct(unallocated_pct), help="Not assigned yet (often buffer/flex).")
-            st.caption("Rule of thumb: ~50% needs, ~30% wants, ~20% save & invest. Unallocated is normal and often intentional.")
+            st.caption(
+                "Rule of thumb: ~50% needs, ~30% wants, ~20% save & invest. "
+                "Unallocated is normal and often intentional."
+            )
 
         with st.container(border=True):
             _section("Net Worth & Liabilities")
             c1, c2 = st.columns(2, gap="medium")
             c1.metric("Net Worth", money(net_worth))
             c2.metric("Total Liabilities", money(total_liabilities))
-
-    return False
