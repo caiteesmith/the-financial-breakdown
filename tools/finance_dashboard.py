@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict
 import json
 import pandas as pd
 import streamlit as st
@@ -94,7 +94,6 @@ DEFAULT_INVESTING = [
     {"Bucket": "Other long-term investing", "Monthly Amount": 0.0, "Notes": ""},
 ]
 
-# NOTE: use "Monthly Payment" here to match the editor / calculations
 DEFAULT_DEBT = [
     {"Debt": "Car loan", "Balance": 0.0, "APR %": 0.0, "Monthly Payment": 0.0, "Notes": ""},
     {"Debt": "Credit card", "Balance": 0.0, "APR %": 0.0, "Monthly Payment": 0.0, "Notes": ""},
@@ -245,9 +244,69 @@ def render_personal_finance_dashboard():
     e4.metric("12 mo", money(metrics["emergency_minimum_monthly"] * 12))
 
     with st.expander("What this includes", expanded=False):
-        st.write(f"• **Fixed bills**: {money(metrics['fixed_total'])}")
-        st.write(f"• **Essentials** (groceries, utilities, healthcare, transit): {money(metrics['essential_total'])}")
-        st.write(f"• **Minimum debt**: {money(metrics['debt_minimums'])}")
+        fixed_df = st.session_state.get("pf_fixed_df", pd.DataFrame())
+        ess_df = st.session_state.get("pf_essential_df", pd.DataFrame())
+        debt_df = st.session_state.get("pf_debt_df", pd.DataFrame())
+
+        col1, col2, col3 = st.columns(3)
+
+        # ---------- helper to render a category column ----------
+        def render_list_column(title, df, name_col, amount_col):
+            st.markdown(f"### {title}")
+
+            if df is None or df.empty:
+                st.caption("No items entered")
+                return
+
+            # --- strip out zero values ---
+            df = df.copy()
+            df[amount_col] = pd.to_numeric(df[amount_col], errors="coerce").fillna(0)
+            df = df[df[amount_col] > 0]
+
+            if df.empty:
+                st.caption("No expenses added for this category yet")
+                return
+
+            # Sort largest > smallest
+            df = df.sort_values(by=amount_col, ascending=False)
+
+            # List each item
+            for _, row in df.iterrows():
+                name = str(row.get(name_col, ""))
+                amount = float(row.get(amount_col, 0.0))
+                st.markdown(f"- **{name}**: {money(amount)}")
+
+            # Total
+            total = df[amount_col].sum()
+            st.markdown(f"**Total:** {money(total)}")
+
+
+        # ---------- Fixed Bills ----------
+        with col1:
+            render_list_column(
+                "Fixed Bills",
+                fixed_df,
+                name_col="Expense",
+                amount_col="Monthly Amount"
+            )
+
+        # ---------- Essentials ----------
+        with col2:
+            render_list_column(
+                "Essential Expenses",
+                ess_df,
+                name_col="Expense",
+                amount_col="Monthly Amount"
+            )
+
+        # ---------- Minimum Debt ----------
+        with col3:
+            render_list_column(
+                "Minimum Debt Payments",
+                debt_df,
+                name_col="Debt",
+                amount_col="Monthly Payment"
+            )
 
     st.divider()
 
@@ -350,7 +409,7 @@ def render_personal_finance_dashboard():
     overall_payoff_date = metrics.get("debt_overall_payoff_date")
     has_non_amortizing = bool(metrics.get("debt_has_non_amortizing", False))
 
-    # ---- Debt Details 
+    # ---- Debt Details ---- #
     c1, c2, c3 = st.columns([1.2, 0.75, 0.75], gap="medium")
 
     with c1:
@@ -378,7 +437,7 @@ def render_personal_finance_dashboard():
             st.rerun()
 
     with c2:
-        # 1) Payoff Timeline (top card)
+        # 1) Payoff Timeline
         with st.container(border=True):
             st.markdown("#### Payoff Timeline")
 
@@ -423,7 +482,7 @@ def render_personal_finance_dashboard():
                                 f"- **{row['Debt']}** → **No payment entered** "
                                 f"(interest ≈ {money(row['monthly_interest'])}/mo)"
                             )
-                        else:  # "too_long" or anything else
+                        else: 
                             st.markdown(
                                 f"- **{row['Debt']}** → **Payoff estimate exceeds 600 months** "
                                 "(try increasing payment)"
@@ -433,7 +492,7 @@ def render_personal_finance_dashboard():
                         st.caption(f"+ {len(payoff_rows) - 6} more…")
 
     with c3:
-        # 2) Debt Check-In (bottom card)
+        # 2) Debt Check-In 
         with st.container(border=True):
             st.markdown("#### Debt Check-In")
 
@@ -464,7 +523,7 @@ def render_personal_finance_dashboard():
                         st.error(f"Very heavy debt burden. {burden_text}")
                         st.caption("Focus on stabilizing cash flow & exploring payoff/consolidation options carefully.")
 
-        # ---- BELOW: Debt charts (visual summary)
+        # ---- Debt charts ---- #
     has_any_debt = (total_debt_balance > 0) or (total_monthly_debt_payments > 0)
 
     with st.expander("Debt Summary", expanded=has_any_debt):
@@ -530,7 +589,6 @@ def render_personal_finance_dashboard():
         },
         "monthly_cash_flow": {
             "total_income_entered": float(metrics["total_income"]),
-            "estimated_taxes": float(metrics["est_tax"]),
             "manual_deductions_total": float(metrics["manual_deductions_total"]),
             "net_income": float(metrics["net_income"]),
             "fixed_expenses": float(metrics["fixed_total"]),
@@ -611,32 +669,6 @@ def render_personal_finance_dashboard():
 
                 except Exception as e:
                     st.error(f"Couldn't read that file: {e}")
-
-    # with cB:
-    #     combined = pd.concat(
-    #         [
-    #             st.session_state["pf_income_df"].assign(Table="Income"),
-    #             st.session_state["pf_fixed_df"].assign(Table="Fixed Expenses"),
-    #             st.session_state["pf_essential_df"].assign(Table="Essential Expenses"),
-    #             st.session_state["pf_nonessential_df"].assign(Table="Non-Essential Expenses"),
-    #             st.session_state["pf_saving_df"].assign(Table="Saving"),
-    #             st.session_state["pf_investing_df"].assign(Table="Investing"),
-    #         ],
-    #         ignore_index=True,
-    #         sort=False,
-    #     )
-    #     _download_csv_button("Download monthly tables (CSV)", combined, "personal_finance_monthly_tables.csv")
-
-    # with cC:
-    #     nw_combined = pd.concat(
-    #         [
-    #             st.session_state["pf_assets_df"].rename(columns={"Asset": "Item"}).assign(Type="Asset"),
-    #             st.session_state["pf_liabilities_df"].rename(columns={"Liability": "Item"}).assign(Type="Liability"),
-    #         ],
-    #         ignore_index=True,
-    #         sort=False,
-    #     )
-    #     _download_csv_button("Download net worth tables (CSV)", nw_combined, "personal_finance_net_worth_tables.csv")
 
     st.divider()
 
