@@ -26,12 +26,10 @@ def _to_float(x) -> float:
         return 0.0
 
 def _ceil_cents(x: float) -> float:
-    # Always round UP to the nearest cent so term-based payoff doesn't spill into month 361
     return math.ceil(float(x) * 100.0 - 1e-9) / 100.0
 
 
 def _add_months(d: date, months: int) -> date:
-    # Safe month-add without extra deps
     year = d.year + (d.month - 1 + months) // 12
     month = (d.month - 1 + months) % 12 + 1
     day = min(d.day, _days_in_month(year, month))
@@ -249,7 +247,7 @@ def render_mortgage_payoff_calculator():
     # Defaults
     st.session_state.setdefault("mtg_start_date", date.today().replace(day=1))
     st.session_state.setdefault("mtg_principal", 422000.0)
-    st.session_state.setdefault("mtg_home_value", 0.0)  # NEW: used for PMI drop-off
+    st.session_state.setdefault("mtg_home_value", 0.0) 
     st.session_state.setdefault("mtg_apr", 6.625)
     st.session_state.setdefault("mtg_term_years", 30)
     st.session_state.setdefault("mtg_mode", "Calculate my payment (term-based)")
@@ -265,7 +263,7 @@ def render_mortgage_payoff_calculator():
             st.subheader("Your Mortgage")
 
             start_date = st.date_input("Start date (first payment month)", key="mtg_start_date")
-            principal = st.number_input("Loan balance/principal", min_value=0.0, step=1000.0, key="mtg_principal")
+            principal = st.number_input("Loan balance", min_value=0.0, step=1000.0, key="mtg_principal")
             home_value = st.number_input(
                 "Home value/Purchase price (for PMI drop-off)",
                 min_value=0.0,
@@ -421,7 +419,7 @@ def render_mortgage_payoff_calculator():
         total_housing_before = float(monthly_payment) + non_pi_before
         total_housing_after = float(monthly_payment) + non_pi_after
 
-        # Summary metrics (2x2 grid so values don't truncate)
+        # Summary metrics
         r1c1, r1c2 = st.columns(2, gap="large")
         r2c1, r2c2 = st.columns(2, gap="large")
 
@@ -440,7 +438,7 @@ def render_mortgage_payoff_calculator():
             c1.metric("Original payoff", baseline_payoff_date.strftime("%b %Y"))
             c2.metric("Payoff with extra", payoff_date.strftime("%b %Y"))
 
-        # PMI drop message + updated housing cost after PMI
+        # PMI drop message & updated housing cost after PMI
         if pmi_drop_date:
             st.success(
                 f"PMI drops off in **{pmi_drop_date.strftime('%B %Y')}**, "
