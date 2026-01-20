@@ -117,7 +117,7 @@ def main():
     if page == "Personal Finance Dashboard":
         render_personal_finance_dashboard(user)
     elif page == "Mortgage Payoff Calculator":
-        render_mortgage_payoff_calculator()
+        render_mortgage_payoff_calculator(user)
     else:
         render_about()
 

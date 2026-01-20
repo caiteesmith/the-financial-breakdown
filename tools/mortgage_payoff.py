@@ -5,12 +5,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Optional
+from typing import Optional, Dict, Any
 
 import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
 import math
+from tools.mtg_persistence import load_mtg_state, upsert_mtg_state
 
 # -------------------------
 # Helpers
@@ -18,12 +19,6 @@ import math
 def _money(x: float) -> str:
     return f"${float(x or 0.0):,.2f}"
 
-
-def _to_float(x) -> float:
-    try:
-        return float(x)
-    except Exception:
-        return 0.0
 
 def _ceil_cents(x: float) -> float:
     return math.ceil(float(x) * 100.0 - 1e-9) / 100.0
@@ -73,6 +68,32 @@ class MortgageResult:
     months: int
     total_interest: float
     total_paid: float
+
+
+def _apply_mortgage_payload_to_state(payload: Dict[str, Any]) -> None:
+    """Restore saved inputs into st.session_state."""
+    if not isinstance(payload, dict):
+        return
+
+    inputs = payload.get("inputs", {}) or {}
+
+    st.session_state["mtg_start_date"] = inputs.get("start_date", st.session_state.get("mtg_start_date"))
+    st.session_state["mtg_principal"] = float(inputs.get("principal", st.session_state.get("mtg_principal", 0.0)) or 0.0)
+    st.session_state["mtg_home_value"] = float(inputs.get("home_value", st.session_state.get("mtg_home_value", 0.0)) or 0.0)
+    st.session_state["mtg_apr"] = float(inputs.get("apr_pct", st.session_state.get("mtg_apr", 0.0)) or 0.0)
+    st.session_state["mtg_mode"] = inputs.get("mode", st.session_state.get("mtg_mode", "Calculate my payment (term-based)"))
+    st.session_state["mtg_term_years"] = int(inputs.get("term_years", st.session_state.get("mtg_term_years", 30)) or 30)
+    st.session_state["mtg_payment_manual"] = float(inputs.get("payment_manual", st.session_state.get("mtg_payment_manual", 0.0)) or 0.0)
+
+    st.session_state["mtg_extra_monthly"] = float(inputs.get("extra_monthly", st.session_state.get("mtg_extra_monthly", 0.0)) or 0.0)
+    st.session_state["mtg_extra_one_time"] = float(inputs.get("extra_one_time", st.session_state.get("mtg_extra_one_time", 0.0)) or 0.0)
+
+    st.session_state["mtg_taxes"] = float(inputs.get("taxes", st.session_state.get("mtg_taxes", 0.0)) or 0.0)
+    st.session_state["mtg_insurance"] = float(inputs.get("insurance", st.session_state.get("mtg_insurance", 0.0)) or 0.0)
+    st.session_state["mtg_pmi"] = float(inputs.get("pmi", st.session_state.get("mtg_pmi", 0.0)) or 0.0)
+    st.session_state["mtg_hoa"] = float(inputs.get("hoa", st.session_state.get("mtg_hoa", 0.0)) or 0.0)
+
+    st.session_state["mtg_scenario_name"] = payload.get("scenario_name", "My mortgage")
 
 
 def build_amortization_schedule(
@@ -238,11 +259,21 @@ def _balance_chart(
     return fig
 
 
-def render_mortgage_payoff_calculator():
+def render_mortgage_payoff_calculator(user=None):
     st.title("🏡 Mortgage Payoff Calculator")
     st.caption(
         "Estimate payoff date, total interest, and how much faster you can pay down your mortgage with extra payments."
     )
+
+    # ---- Load saved state from DB for logged-in users ----
+    user_id = getattr(user, "id", None) if user is not None else None
+
+    if user_id and st.session_state.get("mtg_loaded_from_db") is not True:
+        saved = load_mtg_state(user_id)
+        if isinstance(saved, dict):
+            _apply_mortgage_payload_to_state(saved)
+        st.session_state["mtg_loaded_from_db"] = True
+
 
     # Defaults
     st.session_state.setdefault("mtg_start_date", date.today().replace(day=1))
@@ -491,15 +522,58 @@ def render_mortgage_payoff_calculator():
                 hide_index=True,
             )
 
-        # Export
+        # -------------------------
+        # SAVE SCENARIO
+        # -------------------------
         st.divider()
-        st.subheader("Export")
+        st.subheader("Save this mortgage scenario")
 
-        csv_bytes = result.schedule.to_csv(index=False).encode("utf-8")
-        st.download_button(
-            "Download schedule (CSV)",
-            data=csv_bytes,
-            file_name="mortgage_amortization_schedule.csv",
-            mime="text/csv",
-            width="stretch",
-        )
+        if user_id is None:
+            st.info("Create an account or log in to save this mortgage scenario to your account.")
+        else:
+            scenario_name = st.text_input(
+                "Scenario name",
+                value=st.session_state.get("mtg_scenario_name", "My mortgage"),
+                key="mtg_scenario_name_input",
+            )
+
+            if st.button("Save to my account", type="primary", use_container_width=True):
+                payload = {
+                    "scenario_name": scenario_name or "My mortgage",
+                    "saved_at": date.today().isoformat(),
+                    "inputs": {
+                        "start_date": st.session_state.get("mtg_start_date").isoformat()
+                            if st.session_state.get("mtg_start_date") else None,
+                        "principal": float(st.session_state.get("mtg_principal", 0.0) or 0.0),
+                        "home_value": float(st.session_state.get("mtg_home_value", 0.0) or 0.0),
+                        "apr_pct": float(st.session_state.get("mtg_apr", 0.0) or 0.0),
+                        "mode": st.session_state.get("mtg_mode"),
+                        "term_years": int(st.session_state.get("mtg_term_years", 30) or 30),
+                        "payment_manual": float(st.session_state.get("mtg_payment_manual", 0.0) or 0.0),
+                        "extra_monthly": float(st.session_state.get("mtg_extra_monthly", 0.0) or 0.0),
+                        "extra_one_time": float(st.session_state.get("mtg_extra_one_time", 0.0) or 0.0),
+                        "taxes": float(st.session_state.get("mtg_taxes", 0.0) or 0.0),
+                        "insurance": float(st.session_state.get("mtg_insurance", 0.0) or 0.0),
+                        "pmi": float(st.session_state.get("mtg_pmi", 0.0) or 0.0),
+                        "hoa": float(st.session_state.get("mtg_hoa", 0.0) or 0.0),
+                    },
+                    "summary": {
+                        "payoff_date": payoff_date.isoformat() if payoff_date else None,
+                        "months": months,
+                        "total_interest": float(result.total_interest),
+                        "total_paid": float(result.total_paid),
+                        "baseline_months": baseline_months,
+                        "baseline_interest": baseline_interest,
+                        "interest_saved": float(interest_saved),
+                        "months_saved": int(months_saved),
+                        "pmi_drop_date": pmi_drop_date.isoformat() if pmi_drop_date else None,
+                        "housing_with_pmi": float(total_housing_before),
+                        "housing_without_pmi": float(total_housing_after),
+                    },
+                }
+
+                try:
+                    upsert_mtg_state(user_id, payload)
+                    st.success("Mortgage scenario saved to your account.")
+                except Exception as e:
+                    st.error(f"Save failed: {e}")
