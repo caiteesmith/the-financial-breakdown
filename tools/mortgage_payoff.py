@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from typing import Optional, Dict, Any
 
 import pandas as pd
@@ -77,21 +77,63 @@ def _apply_mortgage_payload_to_state(payload: Dict[str, Any]) -> None:
 
     inputs = payload.get("inputs", {}) or {}
 
-    st.session_state["mtg_start_date"] = inputs.get("start_date", st.session_state.get("mtg_start_date"))
-    st.session_state["mtg_principal"] = float(inputs.get("principal", st.session_state.get("mtg_principal", 0.0)) or 0.0)
-    st.session_state["mtg_home_value"] = float(inputs.get("home_value", st.session_state.get("mtg_home_value", 0.0)) or 0.0)
-    st.session_state["mtg_apr"] = float(inputs.get("apr_pct", st.session_state.get("mtg_apr", 0.0)) or 0.0)
-    st.session_state["mtg_mode"] = inputs.get("mode", st.session_state.get("mtg_mode", "Calculate my payment (term-based)"))
-    st.session_state["mtg_term_years"] = int(inputs.get("term_years", st.session_state.get("mtg_term_years", 30)) or 30)
-    st.session_state["mtg_payment_manual"] = float(inputs.get("payment_manual", st.session_state.get("mtg_payment_manual", 0.0)) or 0.0)
+    # --- Fix: ensure start_date is a `date`, not a string ---
+    raw_start = inputs.get("start_date", st.session_state.get("mtg_start_date"))
+    start_date_val = None
 
-    st.session_state["mtg_extra_monthly"] = float(inputs.get("extra_monthly", st.session_state.get("mtg_extra_monthly", 0.0)) or 0.0)
-    st.session_state["mtg_extra_one_time"] = float(inputs.get("extra_one_time", st.session_state.get("mtg_extra_one_time", 0.0)) or 0.0)
+    if isinstance(raw_start, str) and raw_start:
+        # Expecting ISO format "YYYY-MM-DD"
+        try:
+            start_date_val = date.fromisoformat(raw_start)
+        except ValueError:
+            # Fallback if it somehow isn't ISO
+            start_date_val = date.today().replace(day=1)
+    elif isinstance(raw_start, date):
+        start_date_val = raw_start
+    else:
+        start_date_val = date.today().replace(day=1)
 
-    st.session_state["mtg_taxes"] = float(inputs.get("taxes", st.session_state.get("mtg_taxes", 0.0)) or 0.0)
-    st.session_state["mtg_insurance"] = float(inputs.get("insurance", st.session_state.get("mtg_insurance", 0.0)) or 0.0)
-    st.session_state["mtg_pmi"] = float(inputs.get("pmi", st.session_state.get("mtg_pmi", 0.0)) or 0.0)
-    st.session_state["mtg_hoa"] = float(inputs.get("hoa", st.session_state.get("mtg_hoa", 0.0)) or 0.0)
+    st.session_state["mtg_start_date"] = start_date_val
+    # --------------------------------------------------------
+
+    st.session_state["mtg_principal"] = float(
+        inputs.get("principal", st.session_state.get("mtg_principal", 0.0)) or 0.0
+    )
+    st.session_state["mtg_home_value"] = float(
+        inputs.get("home_value", st.session_state.get("mtg_home_value", 0.0)) or 0.0
+    )
+    st.session_state["mtg_apr"] = float(
+        inputs.get("apr_pct", st.session_state.get("mtg_apr", 0.0)) or 0.0
+    )
+    st.session_state["mtg_mode"] = inputs.get(
+        "mode", st.session_state.get("mtg_mode", "Calculate my payment (term-based)")
+    )
+    st.session_state["mtg_term_years"] = int(
+        inputs.get("term_years", st.session_state.get("mtg_term_years", 30)) or 30
+    )
+    st.session_state["mtg_payment_manual"] = float(
+        inputs.get("payment_manual", st.session_state.get("mtg_payment_manual", 0.0)) or 0.0
+    )
+
+    st.session_state["mtg_extra_monthly"] = float(
+        inputs.get("extra_monthly", st.session_state.get("mtg_extra_monthly", 0.0)) or 0.0
+    )
+    st.session_state["mtg_extra_one_time"] = float(
+        inputs.get("extra_one_time", st.session_state.get("mtg_extra_one_time", 0.0)) or 0.0
+    )
+
+    st.session_state["mtg_taxes"] = float(
+        inputs.get("taxes", st.session_state.get("mtg_taxes", 0.0)) or 0.0
+    )
+    st.session_state["mtg_insurance"] = float(
+        inputs.get("insurance", st.session_state.get("mtg_insurance", 0.0)) or 0.0
+    )
+    st.session_state["mtg_pmi"] = float(
+        inputs.get("pmi", st.session_state.get("mtg_pmi", 0.0)) or 0.0
+    )
+    st.session_state["mtg_hoa"] = float(
+        inputs.get("hoa", st.session_state.get("mtg_hoa", 0.0)) or 0.0
+    )
 
     st.session_state["mtg_scenario_name"] = payload.get("scenario_name", "My mortgage")
 
