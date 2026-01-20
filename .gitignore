@@ -1,12 +1,11 @@
 # =========================
-# Python / Streamlit
+# Python/Streamlit
 # =========================
-
-# Byte-compiled / cache
+# Byte-compiled/cache
 __pycache__/
 *.py[cod]
 
-# Virtual environments
+# Venvs
 .venv/
 venv/
 env/
@@ -14,7 +13,6 @@ ENV/
 
 # Streamlit runtime + local config
 .streamlit/secrets.toml
-.streamlit/config.toml
 .streamlit/cache/
 .streamlit/state/
 
@@ -25,7 +23,6 @@ downloads/
 # =========================
 # Personal Finance Data
 # =========================
-
 # Local data exports & snapshots
 *.csv
 *.xlsx
@@ -36,11 +33,6 @@ downloads/
 *.sqlite
 *.sqlite3
 
-# Backups / exports
-backups/
-exports/
-snapshots/
-
 # =========================
 # Logs & Temp
 # =========================
@@ -49,17 +41,11 @@ snapshots/
 *.swp
 
 # =========================
-# OS / Editor
+# OS/Editor
 # =========================
-
-# macOS
 .DS_Store
-
-# VS Code
 .vscode/
 .code-workspace
-
-# JetBrains
 .idea/
 *.iml
 

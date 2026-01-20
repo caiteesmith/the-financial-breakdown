@@ -4,21 +4,17 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict
-import json
 import pandas as pd
 import streamlit as st
 
 from tools.pf_state import (
     money,
-    pct,
-    safe_float,
     ensure_df,
     sanitize_editor_df,
-    apply_pending_snapshot_if_any,
-    snapshot_signature,
-    bump_uploader_nonce,
+    apply_payload_to_state,
+    build_payload_from_state,
 )
+from tools.pf_persistence import load_pf_state, upsert_pf_state
 from tools.pf_calcs import compute_metrics
 from tools.pf_ui_income import render_income_tab
 from tools.pf_ui_expenses import render_expenses_tab
@@ -30,7 +26,6 @@ from tools.pf_visuals import (
     debt_burden_indicator,
     debt_payoff_order_chart,
 )
-
 
 # -------------------------
 # Defaults
@@ -123,27 +118,6 @@ DEFAULT_LIABILITIES = [
 # -------------------------
 # UI helpers
 # -------------------------
-def _download_json_button(label: str, payload: Dict, filename: str):
-    s = pd.Series(payload).to_json(indent=2)
-    st.download_button(
-        label,
-        data=s,
-        file_name=filename,
-        mime="application/json",
-        width="stretch",
-    )
-
-
-def _download_csv_button(label: str, df: pd.DataFrame, filename: str):
-    st.download_button(
-        label,
-        data=df.to_csv(index=False),
-        file_name=filename,
-        mime="text/csv",
-        width="stretch",
-    )
-
-
 def _dashboard_header(net_income, total_outflow, remaining, emergency_minimum_monthly, net_worth, debt_payments):
     with st.container(border=True):
         st.markdown("**Monthly Outlook**")
@@ -159,13 +133,22 @@ def _dashboard_header(net_income, total_outflow, remaining, emergency_minimum_mo
 # -------------------------
 # Main UI
 # -------------------------
-def render_personal_finance_dashboard():
-    # Must run before widgets are created (so imported snapshots set draft widget keys correctly)
-    apply_pending_snapshot_if_any()
+def render_personal_finance_dashboard(user):
+    # user may be None (guest mode)
+    user_id = getattr(user, "id", None)
 
-    # uploader bookkeeping
-    st.session_state.setdefault("pf_uploader_nonce", 0)
-    st.session_state.setdefault("pf_last_import_sig", "")
+    # -------------------------
+    # LOAD FROM DATABASE (only if logged in)
+    # -------------------------
+    if user_id and st.session_state.get("pf_loaded_from_db") is not True:
+        saved = load_pf_state(user_id)
+        if isinstance(saved, dict):
+            apply_payload_to_state(saved)
+        st.session_state["pf_loaded_from_db"] = True
+        st.rerun()
+    elif st.session_state.get("pf_loaded_from_db") is not True:
+        # First load for guest mode—no DB to pull from
+        st.session_state["pf_loaded_from_db"] = True
 
     st.title("💸 Financial Breakdown")
 
@@ -564,134 +547,52 @@ def render_personal_finance_dashboard():
     st.divider()
 
     # -------------------------
-    # EXPORT / SNAPSHOT
+    # SAVE, PRIVACY & RESET
     # -------------------------
-    st.subheader("Export/Import Snapshot")
 
-    month_label = st.session_state.get("pf_month_label", datetime.now().strftime("%B %Y"))
-    tax_rate = float(st.session_state.get("pf_tax_rate", 0.0) or 0.0)
-    income_is = st.session_state.get("pf_income_is", "Net (after tax)")
+    p0, p1, p2 = st.columns([1, 1, 1], gap="medium")
+    with p0:
+        st.subheader("Save")
+        with st.expander("Save to your account", expanded=False):
+            st.caption(
+                "You can use this dashboard without an account. "
+                "If you want to come back to these exact numbers later, save them to your login."
+            )
 
-    snapshot = {
-        "generated_at": datetime.now().isoformat(timespec="seconds"),
-        "month_label": month_label,
-        "settings": {
-            "income_is": income_is,
-            "tax_rate_pct": float(tax_rate),
-            "gross_mode": st.session_state.get("pf_gross_mode"),
-        },
-        "gross_breakdown_optional": {
-            "taxes": float(st.session_state.get("pf_manual_taxes", 0.0) or 0.0),
-            "retirement_employee": float(st.session_state.get("pf_manual_retirement", 0.0) or 0.0),
-            "company_match": float(st.session_state.get("pf_manual_match", 0.0) or 0.0),
-            "benefits": float(st.session_state.get("pf_manual_benefits", 0.0) or 0.0),
-            "other_ssi": float(st.session_state.get("pf_manual_other_ssi", 0.0) or 0.0),
-        },
-        "monthly_cash_flow": {
-            "total_income_entered": float(metrics["total_income"]),
-            "manual_deductions_total": float(metrics["manual_deductions_total"]),
-            "net_income": float(metrics["net_income"]),
-            "fixed_expenses": float(metrics["fixed_total"]),
-            "essential_expenses": float(metrics["essential_total"]),
-            "nonessential_expenses": float(metrics["nonessential_total"]),
-            "debt_payments_monthly": float(metrics["total_monthly_debt_payments"]),
-            "total_expenses": float(metrics["expenses_total"]),
-            "saving_monthly": float(metrics["saving_total"]),
-            "investing_monthly": float(metrics["investing_display"]),
-            "investing_manual_retirement": float(metrics["employee_retirement"]),
-            "investing_company_match": float(metrics["company_match"]),
-            "saving_and_investing_cashflow_total": float(metrics["saving_total"] + metrics["investing_cashflow"]),
-            "investing_takehome_only": float(metrics["investing_cashflow"]),
-            "left_over": float(metrics["remaining"]),
-            "safe_to_spend_weekly": float(metrics["remaining"] / 4.33),
-            "safe_to_spend_biweekly": float(metrics["remaining"] / (4.33 / 2)),
-            "safe_to_spend_daily": float(metrics["remaining"] / 30.4),
-            "retirement_total_employee_plus_match": float(metrics["total_retirement_contrib"]),
-            "paycheck_breakdown_enabled": bool(st.session_state.get("pf_use_paycheck_breakdown", False)),
-        },
-        "net_worth": {
-            "assets_total": float(metrics["total_assets"]),
-            "liabilities_total": float(metrics["total_liabilities"]),
-            "net_worth": float(metrics["net_worth"]),
-        },
-        "tables": {
-            "income": st.session_state["pf_income_df"].to_dict(orient="records"),
-            "fixed_expenses": st.session_state["pf_fixed_df"].to_dict(orient="records"),
-            "essential_expenses": st.session_state["pf_essential_df"].to_dict(orient="records"),
-            "nonessential_expenses": st.session_state["pf_nonessential_df"].to_dict(orient="records"),
-            "saving": st.session_state["pf_saving_df"].to_dict(orient="records"),
-            "investing": st.session_state["pf_investing_df"].to_dict(orient="records"),
-            "assets": st.session_state["pf_assets_df"].to_dict(orient="records"),
-            "liabilities": st.session_state["pf_liabilities_df"].to_dict(orient="records"),
-            "debt_details": st.session_state["pf_debt_df"].to_dict(orient="records"),
-        },
-        "emergency_minimum": {
-            "monthly": float(metrics["emergency_minimum_monthly"]),
-            "fixed_included": float(metrics["fixed_total"]),
-            "essential_included": float(metrics["essential_total"]),
-            "debt_minimums_included": float(metrics["debt_minimums"]),
-        },
-    }
+            pf_payload = build_payload_from_state(metrics)
+            user_id = getattr(user, "id", None)
 
-    cA, cB = st.columns(2, gap="large")
-    with cA:
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
-        filename = f"personal_finance_snapshot_{timestamp}.json"
-        _download_json_button("Export snapshot", snapshot, filename)
+            save_col = st.columns(1)[0]
+            with save_col:
+                save_disabled = user_id is None
+                btn_label = "Save my data"
 
-    with cB:
-        with st.expander("Import a saved snapshot", expanded=False):
-            st.caption("Upload a previously downloaded snapshot JSON to restore your dashboard inputs.")
+                if save_disabled:
+                    st.caption(
+                        "To enable saving, log in or sign up from the **sidebar** under "
+                        "**“Login/Sign Up”**."
+                    )
 
-            uploader_key = f"pf_snapshot_uploader_{st.session_state['pf_uploader_nonce']}"
-            uploaded = st.file_uploader("Snapshot JSON", type=["json"], key=uploader_key)
-
-            if uploaded is not None:
-                try:
-                    raw = uploaded.getvalue()
-                    sig = snapshot_signature(raw)
-                    snap = json.loads(raw.decode("utf-8"))
-
-                    if not isinstance(snap, dict) or "tables" not in snap:
-                        st.error("That file doesn't look like a valid dashboard snapshot.")
-                    else:
-                        already_applied = sig == st.session_state.get("pf_last_import_sig", "")
-                        if already_applied:
-                            st.info("Snapshot already applied.")
-                        else:
-                            st.success("Snapshot ready to import.")
-                            if st.button("Apply snapshot now", type="primary", width="stretch"):
-                                st.session_state["pf_pending_snapshot"] = snap
-                                st.session_state["pf_has_pending_import"] = True
-                                st.session_state["pf_last_import_sig"] = sig
-                                bump_uploader_nonce()
-                                st.rerun()
-
-                except Exception as e:
-                    st.error(f"Couldn't read that file: {e}")
-
-    st.divider()
-
-    # -------------------------
-    # PRIVACY & RESET
-    # -------------------------
-    st.subheader("Privacy & Reset")
-
-    p1, p2 = st.columns([1.2, 1.2], gap="large")
+                if st.button(btn_label, type="primary", width="stretch", disabled=save_disabled):
+                    try:
+                        upsert_pf_state(user_id, pf_payload)
+                        st.success("Saved to your account.")
+                    except Exception as e:
+                        st.error(f"Save failed: {e}")
     with p1:
-        with st.expander("Privacy & Data Notice", expanded=False):
+        st.subheader("Privacy")
+        with st.expander("Privacy & data notice", expanded=False):
             st.markdown(
                 """
-        **Your data stays local to this session.**
-
-        - This dashboard stores your inputs in temporary session state while the app is open.
-        - If you refresh the page or close the tab, your data can be cleared unless you export a snapshot.
-        - Snapshot files are downloaded to your device. Only you control where they're stored or shared.
-        - This app is not connected to your bank and does not pull transactions automatically.
+                - Your data is stored in this app's database **only when you click "Save my data."**
+                - It's tied to your email login so you can come back to it later.
+                - This app is **not** connected to your bank and does not pull transactions automatically.
+                - You can clear your inputs anytime using **Reset all data** below (this clears them from this session; database-stored data is separate).
                 """
             )
 
     with p2:
+        st.subheader("Reset")
         with st.expander("Reset all data", expanded=False):
             st.warning("This clears the tool's saved tables in this session.")
             if st.button("Reset now", type="primary", key="pf_reset_btn", width="stretch"):

@@ -1,9 +1,10 @@
+# =========================================
+# file: tools/pf_state.py
+# =========================================
 from __future__ import annotations
 
 from datetime import datetime
 from typing import Dict, List
-import json
-import hashlib
 import pandas as pd
 import streamlit as st
 
@@ -33,12 +34,22 @@ def sum_df(df: pd.DataFrame, col: str) -> float:
 
 
 def ensure_df(key: str, default_rows: List[Dict]) -> pd.DataFrame:
+    """
+    Ensure st.session_state[key] is a DataFrame.
+    If missing, seed it with default_rows.
+    """
     if key not in st.session_state or not isinstance(st.session_state[key], pd.DataFrame):
         st.session_state[key] = pd.DataFrame(default_rows)
     return st.session_state[key]
 
 
 def sanitize_editor_df(df: pd.DataFrame, expected_cols: List[str], numeric_cols: List[str]) -> pd.DataFrame:
+    """
+    Clean up a DataFrame coming from st.data_editor:
+    - Drop auto-added index / id-ish columns
+    - Ensure expected columns exist in the right order
+    - Coerce numeric columns
+    """
     if df is None or not isinstance(df, pd.DataFrame):
         df = pd.DataFrame(columns=expected_cols)
 
@@ -61,145 +72,131 @@ def sanitize_editor_df(df: pd.DataFrame, expected_cols: List[str], numeric_cols:
 
 
 # -------------------------
-# Snapshot load/apply
+# Payload load/apply
 # -------------------------
-def load_snapshot_into_state(snapshot: dict):
+def apply_payload_to_state(payload: dict) -> None:
     """
-    Loads snapshot data into st.session_state.
-    Only supports the new schema: fixed + essential + non-essential.
+    Apply a saved payload (from DB) into st.session_state.
+    Payload structure matches what you store in Supabase (tables + settings).
     """
-    if not isinstance(snapshot, dict):
+    if not isinstance(payload, dict):
         return
 
-    st.session_state["pf_month_label"] = snapshot.get("month_label", st.session_state.get("pf_month_label"))
-
-    settings = snapshot.get("settings", {}) or {}
-    if "income_is" in settings:
-        st.session_state["pf_income_is"] = settings.get("income_is") or st.session_state.get("pf_income_is", "Net (after tax)")
-    if "gross_mode" in settings:
-        st.session_state["pf_gross_mode"] = settings.get("gross_mode") or st.session_state.get("pf_gross_mode", "Estimate (tax rate)")
-    if "tax_rate_pct" in settings:
-        st.session_state["pf_tax_rate"] = safe_float(settings.get("tax_rate_pct", st.session_state.get("pf_tax_rate", 0.0)))
-
-    gb = snapshot.get("gross_breakdown_optional", {}) or {}
-    st.session_state["pf_manual_taxes"] = safe_float(gb.get("taxes", 0))
-    st.session_state["pf_manual_retirement"] = safe_float(gb.get("retirement_employee", 0))
-    st.session_state["pf_manual_match"] = safe_float(gb.get("company_match", 0))
-    st.session_state["pf_manual_benefits"] = safe_float(gb.get("benefits", 0))
-    st.session_state["pf_manual_other_ssi"] = safe_float(gb.get("other_ssi", 0))
-
-    gb = snapshot.get("gross_breakdown_optional", {}) or {}
-    st.session_state["pf_manual_taxes"] = safe_float(gb.get("taxes", 0))
-    st.session_state["pf_manual_retirement"] = safe_float(gb.get("retirement_employee", 0))
-    st.session_state["pf_manual_match"] = safe_float(gb.get("company_match", 0))
-    st.session_state["pf_manual_benefits"] = safe_float(gb.get("benefits", 0))
-    st.session_state["pf_manual_other_ssi"] = safe_float(gb.get("other_ssi", 0))
-
-    # Keep paycheck breakdown drafts in sync with manual values
-    st.session_state["pf_draft_taxes"] = st.session_state["pf_manual_taxes"]
-    st.session_state["pf_draft_retirement"] = st.session_state["pf_manual_retirement"]
-    st.session_state["pf_draft_match"] = st.session_state["pf_manual_match"]
-    st.session_state["pf_draft_benefits"] = st.session_state["pf_manual_benefits"]
-    st.session_state["pf_draft_other_ssi"] = st.session_state["pf_manual_other_ssi"]
-
-    tables = snapshot.get("tables", {}) or {}
-
-    def _set_table(key: str, rows: list[dict], expected_cols: list[str], numeric_cols: list[str]):
-        df = pd.DataFrame(rows or [])
-        st.session_state[key] = sanitize_editor_df(df, expected_cols=expected_cols, numeric_cols=numeric_cols)
-
-    _set_table("pf_income_df", tables.get("income"), ["Source", "Monthly Amount", "Notes"], ["Monthly Amount"])
-    _set_table("pf_fixed_df", tables.get("fixed_expenses"), ["Expense", "Monthly Amount", "Notes"], ["Monthly Amount"])
-    _set_table("pf_essential_df", tables.get("essential_expenses"), ["Expense", "Monthly Amount", "Notes"], ["Monthly Amount"])
-    _set_table("pf_nonessential_df", tables.get("nonessential_expenses"), ["Expense", "Monthly Amount", "Notes"], ["Monthly Amount"])
-    _set_table("pf_saving_df", tables.get("saving"), ["Bucket", "Monthly Amount", "Notes"], ["Monthly Amount"])
-    _set_table("pf_investing_df", tables.get("investing"), ["Bucket", "Monthly Amount", "Notes"], ["Monthly Amount"])
-    _set_table("pf_assets_df", tables.get("assets"), ["Asset", "Value", "Notes"], ["Value"])
-    _set_table("pf_liabilities_df", tables.get("liabilities"), ["Liability", "Value", "Notes"], ["Value"])
-    _set_table("pf_debt_df", tables.get("debt_details"),
-               ["Debt", "Balance", "APR %", "Monthly Payment", "Notes"],
-               ["Balance", "APR %", "Monthly Payment"])
-
-
-def apply_pending_snapshot_if_any() -> None:
-    """
-    If there's a snapshot waiting in session_state["pf_pending_snapshot"],
-    apply it to the various pf_* tables & settings, then clear the flag.
-    """
-    if not st.session_state.get("pf_has_pending_import"):
-        return
-
-    snap = st.session_state.get("pf_pending_snapshot")
-    if not isinstance(snap, dict):
-        # Nothing usable; clear and bail.
-        st.session_state["pf_has_pending_import"] = False
-        st.session_state.pop("pf_pending_snapshot", None)
-        return
-
-    # ----- Core tables -----
-    tables = snap.get("tables", {})
-    def _to_df(records, cols):
-        if not isinstance(records, list):
-            return pd.DataFrame(columns=cols)
-        df = pd.DataFrame.from_records(records)
-        # ensure all expected cols exist
-        for c in cols:
-            if c not in df.columns:
-                df[c] = 0.0 if c != "Notes" else ""
-        return df[cols]
-
-    st.session_state["pf_income_df"] = _to_df(tables.get("income"), ["Source", "Monthly Amount", "Notes"])
-    st.session_state["pf_fixed_df"] = _to_df(tables.get("fixed_expenses"), ["Expense", "Monthly Amount", "Notes"])
-    st.session_state["pf_essential_df"] = _to_df(tables.get("essential_expenses"), ["Expense", "Monthly Amount", "Notes"])
-    st.session_state["pf_nonessential_df"] = _to_df(tables.get("nonessential_expenses"), ["Expense", "Monthly Amount", "Notes"])
-    st.session_state["pf_saving_df"] = _to_df(tables.get("saving"), ["Bucket", "Monthly Amount", "Notes"])
-    st.session_state["pf_investing_df"] = _to_df(tables.get("investing"), ["Bucket", "Monthly Amount", "Notes"])
-    st.session_state["pf_assets_df"] = _to_df(tables.get("assets"), ["Asset", "Value", "Notes"])
-    st.session_state["pf_liabilities_df"] = _to_df(tables.get("liabilities"), ["Liability", "Value", "Notes"])
-    st.session_state["pf_debt_df"] = _to_df(
-        tables.get("debt_details"),
-        ["Debt", "Balance", "APR %", "Monthly Payment", "Notes"],
+    # ---- Top-level ----
+    st.session_state["pf_month_label"] = payload.get(
+        "month_label",
+        st.session_state.get("pf_month_label", datetime.now().strftime("%B %Y")),
     )
 
-    # ----- Settings / metadata -----
-    settings = snap.get("settings", {})
-    st.session_state["pf_month_label"] = snap.get("month_label", st.session_state.get("pf_month_label", ""))
-    st.session_state["pf_income_is"] = settings.get("income_is", st.session_state.get("pf_income_is", "Net (after tax)"))
-    st.session_state["pf_tax_rate"] = float(settings.get("tax_rate_pct", st.session_state.get("pf_tax_rate", 0.0)) or 0.0)
-    st.session_state["pf_gross_mode"] = settings.get("gross_mode", st.session_state.get("pf_gross_mode", "Estimate (tax rate)"))
+    # ---- Settings ----
+    settings = payload.get("settings", {}) or {}
 
-    # Optional gross breakdown fields
-    gross = snap.get("gross_breakdown_optional", {})
-    st.session_state["pf_manual_taxes"] = float(gross.get("taxes", 0.0) or 0.0)
-    st.session_state["pf_manual_retirement"] = float(gross.get("retirement_employee", 0.0) or 0.0)
-    st.session_state["pf_manual_match"] = float(gross.get("company_match", 0.0) or 0.0)
-    st.session_state["pf_manual_benefits"] = float(gross.get("benefits", 0.0) or 0.0)
-    st.session_state["pf_manual_other_ssi"] = float(gross.get("other_ssi", 0.0) or 0.0)
+    st.session_state["pf_income_is"] = settings.get(
+        "income_is",
+        st.session_state.get("pf_income_is", "Net (after tax)"),
+    )
+    st.session_state["pf_gross_mode"] = settings.get(
+        "gross_mode",
+        st.session_state.get("pf_gross_mode", "Estimate (tax rate)"),
+    )
+    st.session_state["pf_tax_rate"] = safe_float(
+        settings.get("tax_rate_pct", st.session_state.get("pf_tax_rate", 0.0))
+    )
 
-    # Sync paycheck breakdown *draft* fields so the UI repopulates correctly
-    st.session_state["pf_draft_taxes"] = st.session_state["pf_manual_taxes"]
-    st.session_state["pf_draft_retirement"] = st.session_state["pf_manual_retirement"]
-    st.session_state["pf_draft_match"] = st.session_state["pf_manual_match"]
-    st.session_state["pf_draft_benefits"] = st.session_state["pf_manual_benefits"]
-    st.session_state["pf_draft_other_ssi"] = st.session_state["pf_manual_other_ssi"]
+    # ---- Optional gross breakdown ----
+    gb = payload.get("gross_breakdown_optional", {}) or {}
+    st.session_state["pf_manual_taxes"] = safe_float(
+        gb.get("taxes", st.session_state.get("pf_manual_taxes", 0.0))
+    )
+    st.session_state["pf_manual_retirement"] = safe_float(
+        gb.get("retirement_employee", st.session_state.get("pf_manual_retirement", 0.0))
+    )
+    st.session_state["pf_manual_match"] = safe_float(
+        gb.get("company_match", st.session_state.get("pf_manual_match", 0.0))
+    )
+    st.session_state["pf_manual_benefits"] = safe_float(
+        gb.get("benefits", st.session_state.get("pf_manual_benefits", 0.0))
+    )
+    st.session_state["pf_manual_other_ssi"] = safe_float(
+        gb.get("other_ssi", st.session_state.get("pf_manual_other_ssi", 0.0))
+    )
 
-    # ----- Restore paycheck breakdown flag -----
-    monthly = snap.get("monthly_cash_flow", {})
+    # (Optional) keep paycheck breakdown drafts in sync
     st.session_state["pf_use_paycheck_breakdown"] = bool(
-        monthly.get(
+        payload.get("monthly_cash_flow", {}).get(
             "paycheck_breakdown_enabled",
             st.session_state.get("pf_use_paycheck_breakdown", False),
         )
     )
+    st.session_state["pf_draft_taxes"] = st.session_state["pf_manual_taxes"]
+    st.session_state["pf_draft_retirement"] = st.session_state["pf_manual_retirement"]
+    st.session_state["pf_draft_match"] = st.session_state["pf_manual_match"]
+    st.session_state["pf_draft_benefits"] = st.session_state["pf_manual_benefits"]
+    st.session_state["pf_draft_other_ssi"] = st.session_state["pf_manual_other_ssi"]
 
-    # Clear the pending flag so we don't re-apply next run
-    st.session_state["pf_has_pending_import"] = False
-    st.session_state.pop("pf_pending_snapshot", None)
+    # ---- Tables ----
+    tables = payload.get("tables", {}) or {}
+
+    def _set_table(key: str, records_key: str, expected_cols: list[str], numeric_cols: list[str]):
+        records = tables.get(records_key) or []
+        df = pd.DataFrame(records)
+        st.session_state[key] = sanitize_editor_df(df, expected_cols, numeric_cols)
+
+    _set_table("pf_income_df", "income", ["Source", "Monthly Amount", "Notes"], ["Monthly Amount"])
+    _set_table("pf_fixed_df", "fixed_expenses", ["Expense", "Monthly Amount", "Notes"], ["Monthly Amount"])
+    _set_table("pf_essential_df", "essential_expenses", ["Expense", "Monthly Amount", "Notes"], ["Monthly Amount"])
+    _set_table("pf_nonessential_df", "nonessential_expenses", ["Expense", "Monthly Amount", "Notes"], ["Monthly Amount"])
+    _set_table("pf_saving_df", "saving", ["Bucket", "Monthly Amount", "Notes"], ["Monthly Amount"])
+    _set_table("pf_investing_df", "investing", ["Bucket", "Monthly Amount", "Notes"], ["Monthly Amount"])
+    _set_table("pf_assets_df", "assets", ["Asset", "Value", "Notes"], ["Value"])
+    _set_table("pf_liabilities_df", "liabilities", ["Liability", "Value", "Notes"], ["Value"])
+    _set_table(
+        "pf_debt_df",
+        "debt_details",
+        ["Debt", "Balance", "APR %", "Monthly Payment", "Notes"],
+        ["Balance", "APR %", "Monthly Payment"],
+    )
 
 
-def snapshot_signature(raw: bytes) -> str:
-    return hashlib.sha256(raw).hexdigest()
+def build_payload_from_state(metrics: dict) -> dict:
+    """
+    Build a payload suitable for saving to Supabase from the current session_state + metrics.
+    """
+    month_label = st.session_state.get("pf_month_label", datetime.now().strftime("%B %Y"))
+    tax_rate = float(st.session_state.get("pf_tax_rate", 0.0) or 0.0)
+    income_is = st.session_state.get("pf_income_is", "Net (after tax)")
 
-
-def bump_uploader_nonce():
-    st.session_state["pf_uploader_nonce"] = int(st.session_state.get("pf_uploader_nonce", 0)) + 1
+    return {
+        "saved_at": datetime.now().isoformat(timespec="seconds"),
+        "month_label": month_label,
+        "settings": {
+            "income_is": income_is,
+            "tax_rate_pct": float(tax_rate),
+            "gross_mode": st.session_state.get("pf_gross_mode"),
+        },
+        "gross_breakdown_optional": {
+            "taxes": float(st.session_state.get("pf_manual_taxes", 0.0) or 0.0),
+            "retirement_employee": float(st.session_state.get("pf_manual_retirement", 0.0) or 0.0),
+            "company_match": float(st.session_state.get("pf_manual_match", 0.0) or 0.0),
+            "benefits": float(st.session_state.get("pf_manual_benefits", 0.0) or 0.0),
+            "other_ssi": float(st.session_state.get("pf_manual_other_ssi", 0.0) or 0.0),
+        },
+        "monthly_cash_flow": {
+            "total_income_entered": float(metrics.get("total_income", 0.0) or 0.0),
+            "net_income": float(metrics.get("net_income", 0.0) or 0.0),
+            "total_expenses": float(metrics.get("expenses_total", 0.0) or 0.0),
+            "left_over": float(metrics.get("remaining", 0.0) or 0.0),
+            "paycheck_breakdown_enabled": bool(st.session_state.get("pf_use_paycheck_breakdown", False)),
+        },
+        "tables": {
+            "income": st.session_state["pf_income_df"].to_dict(orient="records"),
+            "fixed_expenses": st.session_state["pf_fixed_df"].to_dict(orient="records"),
+            "essential_expenses": st.session_state["pf_essential_df"].to_dict(orient="records"),
+            "nonessential_expenses": st.session_state["pf_nonessential_df"].to_dict(orient="records"),
+            "saving": st.session_state["pf_saving_df"].to_dict(orient="records"),
+            "investing": st.session_state["pf_investing_df"].to_dict(orient="records"),
+            "assets": st.session_state["pf_assets_df"].to_dict(orient="records"),
+            "liabilities": st.session_state["pf_liabilities_df"].to_dict(orient="records"),
+            "debt_details": st.session_state["pf_debt_df"].to_dict(orient="records"),
+        },
+    }

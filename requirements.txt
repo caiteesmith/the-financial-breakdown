@@ -5,3 +5,5 @@ python-dateutil==2.9.0.post0
 geopy==2.4.1
 openpyxl>=3.1.2
 plotly
+supabase
+python-dotenv
